@@ -204,45 +204,6 @@ The demo prompts for an OpenRouter key (stored in that browser only) — see
 [docs/security-model.md](docs/security-model.md) for why a client-side key is
 effectively public and how to handle that responsibly.
 
-## Publishing (gametorch npm account)
-
-Packages ship unscoped under the official GameTorch account, matching
-[`gametorch-ts`](https://github.com/gametorch/gametorch-ts): `@gametorch/ibh`
-(umbrella, self-contained) plus `@gametorch/ibh-react`, `@gametorch/ibh-vue`,
-`@gametorch/ibh-angular`, `@gametorch/ibh-svelte`, `@gametorch/ibh-solid`. The
-internal packages (`@ibh/policy`, `@ibh/executor`, `@ibh/core`, `@ibh/ui`) are
-marked private and are never published — consumers install only the binding they
-need, which pulls `@gametorch/ibh` automatically.
-
-```bash
-pnpm login                     # with the official gametorch account (2FA on)
-
-pnpm publish:dry               # build + npm pack --dry-run for every package:
-                               # review the exact file list BEFORE publishing
-
-pnpm publish:all --otp <code>  # build + test + pnpm -r publish --access public
-                               # + npm supply-chain provenance
-                               # publishes the umbrella FIRST, then bindings
-# one package:                 pnpm --filter @gametorch/ibh-react publish --access public
-# no provenance:               pnpm publish:all:noprovenance --otp <code>
-```
-
-Order matters on first publish: `@gametorch/ibh` must exist before the bindings
-(bindings declare it as an npm dependency). `pnpm -r publish` sorts by
-dependency automatically. `--provenance` requires the GitHub repo to be
-**public** at publish time.
-
-**Login gotcha:** log in with `npm login` — pnpm 12 stores its own login token
-in its private config store, which `npm` (and `pnpm publish`'s auth check)
-don't read from `~/.npmrc`. After `npm login`, verify with `npm whoami`.
-
-Every publishable package declares an explicit `files` allowlist and runs
-`prepack` (a full workspace build) so a stale or stray file can never ship.
-`publish:all` passes `--provenance` for npm supply-chain attestation — provenance
-requires the GitHub repo to be **public** at publish time; drop the flag while
-the repo is still private. Never publish with `--force`; bump versions
-deliberately.
-
 ## Status
 
 v0.1.0 — first working skeleton: manifest validation, gatekeeper, agent loop,
