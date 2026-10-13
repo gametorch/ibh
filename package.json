@@ -17,10 +17,9 @@
     "demo": "pnpm build && node examples/gametorch-demo/server.js",
     "demo:plain": "pnpm build && node examples/plain-html/server.js",
     "publish:dry": "pnpm build && pnpm --filter @gametorch/ibh --filter @gametorch/ibh-react --filter @gametorch/ibh-vue --filter @gametorch/ibh-angular --filter @gametorch/ibh-svelte --filter @gametorch/ibh-solid exec npm pack --dry-run",
-    "publish:all": "pnpm build && pnpm test && pnpm -r publish --access public --provenance",
+    "publish:all": "pnpm build && pnpm test && pnpm -r publish --access public",
     "test:e2e": "node examples/proxy/e2e/e2e.mjs",
-    "lint": "oxlint --deny-warnings packages examples",
-    "publish:all:noprovenance": "pnpm build && pnpm test && pnpm -r publish --access public"
+    "lint": "oxlint --deny-warnings packages examples"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
