@@ -20,7 +20,6 @@
     "publish:all": "pnpm build && pnpm test && pnpm -r publish --access public --provenance",
     "test:e2e": "node examples/proxy/e2e/e2e.mjs",
     "lint": "oxlint --deny-warnings packages examples",
-    "publish:all:provenance": "pnpm build && pnpm test && pnpm -r publish --access public --provenance",
     "publish:all:noprovenance": "pnpm build && pnpm test && pnpm -r publish --access public"
   },
   "devDependencies": {
