@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
-import { StrictMode, createRef } from 'react';
+import { StrictMode, createRef, Component, type ReactNode } from 'react';
 import { IbhChat } from './index';
 import type { IbhChatHandle, IbhChatProps } from './index';
 import { init } from '@gametorch/ibh';
@@ -134,11 +134,33 @@ describe('IbhChat', () => {
     expect(cfg.llm).toEqual({ openRouterKey: 'sk-user-own-key' });
   });
 
+  class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+    state = { error: null as Error | null };
+    static getDerivedStateFromError(error: Error) {
+      return { error };
+    }
+    render() {
+      return this.state.error ? <div>{this.state.error.message}</div> : this.props.children;
+    }
+  }
+
   it('propagates init failures (e.g. invalid manifest) to the error boundary', () => {
     initMock.mockImplementation(() => {
       throw new Error('ibh: invalid capability manifest — tier is required');
     });
-    expect(() => render(<IbhChat {...baseProps} />)).toThrow('ibh: invalid capability manifest');
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { getByText } = render(
+        <ErrorBoundary>
+          <IbhChat {...baseProps} />
+        </ErrorBoundary>
+      );
+      // the boundary catches the throw and renders the message — no unhandled
+      // jsdom runtime error noise
+      expect(getByText('ibh: invalid capability manifest — tier is required')).toBeDefined();
+    } finally {
+      consoleSpy.mockRestore();
+    }
   });
 
   it('renders nothing into the DOM tree itself (panel self-mounts on body)', () => {
