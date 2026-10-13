@@ -9,7 +9,7 @@ talk, and the transcript is sent or filled in.
 
 **Already in production:**
 - [GAMETORCH](https://gametorch.app) — game-asset studio: the agent creates, generates and publishes sprites
-- [Home Makeover Deluxe!](https://homemakeover.app) — home-makeover game studio: the agent manages the game's room/level catalog and decor asset workflows
+- [Home Makeover Deluxe!](https://homemakeover.app) — real-life home renovation service: the agent manages the renovation project catalog and design asset workflows
 
 **Try it live now:** [homemakeover.app/playground](https://homemakeover.app/playground/) —
 an interactive ibh playground hosted by Home Makeover Deluxe! No install needed.
