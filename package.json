@@ -1,0 +1,42 @@
+{
+  "name": "ibh-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ibh \u2014 an application-agnostic, in-browser agent harness. Drop-in on any site: acts on behalf of the signed-in user through an explicit, enforced capability manifest.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=12"
+  },
+  "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "audit": "pnpm audit --audit-level=moderate",
+    "demo": "pnpm build && node examples/gametorch-demo/server.js",
+    "demo:plain": "pnpm build && node examples/plain-html/server.js",
+    "publish:dry": "pnpm build && pnpm --filter @gametorch/ibh --filter @gametorch/ibh-react --filter @gametorch/ibh-vue --filter @gametorch/ibh-angular --filter @gametorch/ibh-svelte --filter @gametorch/ibh-solid exec npm pack --dry-run",
+    "publish:all": "pnpm build && pnpm test && pnpm -r publish --access public --provenance",
+    "test:e2e": "node examples/proxy/e2e/e2e.mjs",
+    "lint": "oxlint --deny-warnings packages examples",
+    "publish:all:provenance": "pnpm build && pnpm test && pnpm -r publish --access public --provenance",
+    "publish:all:noprovenance": "pnpm build && pnpm test && pnpm -r publish --access public"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "jsdom": "^25.0.1",
+    "oxlint": "^1.87.0",
+    "playwright-core": "^1.64.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "svelte": "^5.57.2",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^5.0.3"
+  }
+}

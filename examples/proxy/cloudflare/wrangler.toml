@@ -1,0 +1,36 @@
+# wrangler configuration for the ibh LLM proxy.
+# Deploy:  pnpm dlx wrangler deploy        (secrets first — see README)
+# Dev:     pnpm dlx wrangler dev
+
+name = "ibh-llm-proxy"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Serve on YOUR zone (same-origin => session cookies flow, no CORS needed).
+routes = [
+  { pattern = "example.com/api/ibh-llm/*", zone_name = "example.com" },
+]
+
+[vars]
+# The server-side model gate (the client-side manifest is advisory).
+ALLOWED_MODELS = "openai/gpt-6-luna,anthropic/claude-haiku-5.5"
+# The path prefix ibh uses as llm.baseUrl (must match your ibh config).
+MOUNT_PATH = "/api/ibh-llm"
+# Session cookie name ibh's host app uses.
+COOKIE_NAME = "sid"
+# Session verification: "jwt-hs256" or "remote" (see README).
+AUTH_MODE = "jwt-hs256"
+# Optional JWT claim pinning (enforced when set):
+# AUTH_ISS = "https://your-idp"
+# AUTH_AUD = "your-audience"
+# For AUTH_MODE = "remote": your app's session-verify endpoint.
+# AUTH_VERIFY_URL = "https://example.com/session/verify"
+
+# Secrets — set via CLI, never committed:
+#   pnpm dlx wrangler secret put OPENROUTER_KEY
+#   pnpm dlx wrangler secret put AUTH_SECRET      (jwt-hs256 mode only)
+
+# Optional hardening:
+# [limits]
+# Read the README "Rate limiting" section — prefer a Cloudflare WAF
+# rate-limiting rule on the route for global, per-user limiting.

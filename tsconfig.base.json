@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ibh/policy": ["packages/policy/src/index.ts"],
+      "@ibh/executor": ["packages/executor/src/index.ts"],
+      "@ibh/core": ["packages/core/src/index.ts"],
+      "@ibh/ui": ["packages/ui/src/index.ts"]
+    }
+  }
+}

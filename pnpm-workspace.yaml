@@ -1,0 +1,24 @@
+packages:
+  - packages/*
+  - examples/*
+
+# ---------------------------------------------------------------------------
+# Supply-chain hardening (pnpm-native, no extra tooling):
+# - strictDepBuilds: install FAILS if any dependency wants to run a build script
+#   that is not explicitly allow-listed in allowBuilds below. Today that
+#   allow-list contains exactly one entry: esbuild (tsup's bundler).
+# - minimumReleaseAge: freshly published versions are held back for a review
+#   window before pnpm will resolve them, blunting "new release, zero-day" attacks.
+# - The lockfile (pnpm-lock.yaml) is committed and must be reviewed on every
+#   dependency change.
+# - Only one runtime dependency exists outside the workspace itself (plus the
+#   framework peer the consumer already ships): keep it that way.
+# ---------------------------------------------------------------------------
+strictDepBuilds: true
+minimumReleaseAge: 4320 # 3 days, in minutes
+allowBuilds:
+  esbuild: true
+# Keep the transitive esbuild (via tsup) on the patched line; we never run its
+# dev server, but there is no reason to carry the advisory at all.
+overrides:
+  esbuild: ^0.28.1

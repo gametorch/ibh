@@ -1,0 +1,52 @@
+{
+  "name": "@gametorch/ibh-angular",
+  "version": "0.1.0",
+  "description": "Angular bindings for ibh \u2014 a drop-in <ibh-chat> in-browser agent component gated by a capability manifest.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gametorch/ibh": "workspace:*"
+  },
+  "peerDependencies": {
+    "@angular/core": ">=19.0.0 <23.0.0"
+  },
+  "devDependencies": {
+    "@angular/core": "^22.2.2",
+    "rxjs": "^7.4.0",
+    "tslib": "^2.3.0"
+  },
+  "keywords": [
+    "gametorch",
+    "ibh",
+    "angular",
+    "agent",
+    "chatbot",
+    "ai"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gametorch/ibh.git"
+  },
+  "homepage": "https://gametorch.app",
+  "prepack": "pnpm -w build"
+}

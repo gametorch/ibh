@@ -1,0 +1,27 @@
+[package]
+name = "ibh-llm-proxy"
+version = "0.1.0"
+edition = "2021"
+description = "ibh LLM proxy — a Rocket server that forwards ibh's calls to OpenRouter without shipping a key to the browser."
+license = "MIT"
+publish = false
+
+# Supply-chain discipline (mirrors the pnpm posture in this repo):
+# - versions are PINNED EXACTLY (no carets) — upgrades are deliberate, reviewed,
+#   and gated on `cargo audit` (install: cargo install cargo-audit; run in CI).
+# - every pin below was published well before use (>= 3 days) and is a
+#   first-party or ecosystem-standard crate. Keep the list this small.
+# - commit Cargo.lock and review it on every dependency change.
+
+[dependencies]
+rocket = { version = "=0.5.1", features = ["json"] }
+# rustls (no openssl): no C toolchain requirement, smaller attack surface
+reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "stream"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.151" }
+tokio-util = { version = "=0.7.19", features = ["io"] }
+
+[profile.release]
+# small hardening set; tune to taste
+lto = true
+strip = true

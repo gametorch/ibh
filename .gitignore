@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+target/
+.test_openrouter_api_key

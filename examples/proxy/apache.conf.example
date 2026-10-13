@@ -1,0 +1,107 @@
+# ============================================================================
+# ibh LLM proxy — Apache httpd variant (no application code, no model allowlist)
+# ============================================================================
+# Point ibh at it:  llm: { baseUrl: '/api/ibh-llm' }   (no key in the page)
+#
+# Tradeoff (option "a", same as the nginx variant — documented, intentional):
+# no model allowlist. Plain httpd cannot inspect the JSON body (that would need
+# ModSecurity). Instead rely on:
+#   1. Hardcode ONE model in the manifest:
+#        llm.allowedModels: ["openai/gpt-6-luna"], defaultModel: same.
+#      One model = nothing to allowlist at all.
+#   2. An OpenRouter PER-KEY SPEND CAP — the real server-side bound.
+# Residual risk, stated honestly: the manifest is client-side and advisory, so a
+# manipulated agent could still request another model through this proxy; the
+# spend cap bounds the damage. If that is unacceptable, use the node/Cloudflare
+# variants in examples/proxy/ (they inspect the body).
+#
+# Modules (Debian/Ubuntu naming; adapt to your distro):
+#   a2enmod proxy proxy_http ssl headers env
+#   plus ONE auth option (see examples/proxy/README.md):
+#     a2enmod auth_openidc      # option 1: native OIDC session validation
+#     a2enmod authnz_fcgi       # option 2: FastCGI authorizer (~= nginx auth_request)
+#
+# Secret: prefer the environment over inline config. Export OPENROUTER_KEY in
+# /etc/apache2/envvars (sourced by apache2ctl at startup; file root-owned 0640).
+# The %{OPENROUTER_KEY}e below expands it at request time.
+
+# --- outbound TLS to openrouter.ai ------------------------------------------
+SSLProxyEngine on
+SSLProxyVerify require
+# depth 1 (the default) rejects real-world chains (leaf + intermediate):
+# mod_ssl aborts the handshake with AH02040 "Certificate Chain too long".
+SSLProxyVerifyDepth 3
+SSLProxyCheckPeerName on
+SSLProxyCheckPeerCN on
+SSLProxyCACertificateFile /etc/ssl/certs/ca-certificates.crt
+
+# NOTE: httpd has NO built-in request-rate limiter (mod_ratelimit throttles
+# bandwidth, not requests). See examples/proxy/README.md caveat 2 for the
+# options (mod_evasive, ModSecurity, or edge rate limiting on Cloudflare).
+
+<VirtualHost *:443>
+    ServerName gametorch.app
+    SSLEngine on
+    # ssl_certificate     /etc/letsencrypt/live/gametorch.app/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/gametorch.app/privkey.pem;
+
+    # Model calls are slow; ibh's own client timeout is 120s. ProxyTimeout must
+    # exceed it or httpd kills long generations (README caveat 3).
+    ProxyTimeout 180
+
+    # --- chat completions ----------------------------------------------------
+    <Location /api/ibh-llm/chat/completions>
+        # pick exactly ONE auth option (keep the other commented out):
+        # option 1 — native OIDC session validation (mod_auth_openidc):
+        AuthType openid-connect
+        Require valid-user
+        # option 2 — FastCGI authorizer, the auth_request analog
+        # (mod_authnz_fcgi; your app implements the AUTHORIZER role):
+        # AuthType Basic
+        # AuthName "ibh proxy"
+        # AuthBasicProvider fcgi://127.0.0.1:9000
+        # Require valid-user
+
+        LimitRequestBody 1048576
+
+        ProxyPass https://openrouter.ai/api/v1/chat/completions
+        ProxyPreserveHost Off
+
+        # PRIVACY + SECURITY: strip everything the client sent, then set our
+        # own. The user's session Cookie must NEVER reach openrouter.ai.
+        RequestHeader unset Cookie early
+        RequestHeader unset Authorization early
+        RequestHeader set Authorization "Bearer %{OPENROUTER_KEY}e"
+        RequestHeader set X-Title "ibh"
+        RequestHeader set Content-Type "application/json"
+    </Location>
+
+    # --- audio transcriptions (ui.stt) ----------------------------------------
+    <Location /api/ibh-llm/audio/transcriptions>
+        AuthType openid-connect
+        Require valid-user
+        # AuthType Basic
+        # AuthName "ibh proxy"
+        # AuthBasicProvider fcgi://127.0.0.1:9000
+        # Require valid-user
+
+        LimitRequestBody 8388608
+
+        ProxyPass https://openrouter.ai/api/v1/audio/transcriptions
+        ProxyPreserveHost Off
+
+        RequestHeader unset Cookie early
+        RequestHeader unset Authorization early
+        RequestHeader set Authorization "Bearer %{OPENROUTER_KEY}e"
+        RequestHeader set X-Title "ibh"
+        RequestHeader set Content-Type "application/json"
+    </Location>
+
+    # Any other /api/ibh-llm/* path matches no Location and falls through to
+    # your normal routes / 404. That IS the path allowlist: exactly two
+    # endpoints are proxied, nothing else can be reached.
+
+    # your application
+    ProxyPass / http://127.0.0.1:3000/
+    ProxyPassReverse / http://127.0.0.1:3000/
+</VirtualHost>

@@ -1,0 +1,25 @@
+{
+  "name": "@ibh/core",
+  "version": "0.1.0",
+  "description": "ibh agent core: OpenRouter client, system prompt, page context builder and the gated agent loop.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ibh/executor": "workspace:*",
+    "@ibh/policy": "workspace:*"
+  },
+  "private": true
+}

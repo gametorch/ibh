@@ -1,0 +1,52 @@
+# ibh
+
+> ibh is an application-agnostic, in-browser agent harness. Drop it into any
+> website: signed-in users get a chat panel that can call the site's API with
+> their existing session, operate the page's DOM, and navigate — gated by an
+> explicit capability manifest the site authors and the runtime enforces
+> (validation → consent tiers → rate limits → budgets → execution → audit log).
+> Framework components for React, Vue, Angular, Svelte and Solid ship as npm
+> packages, with voice input (speech-to-text via OpenRouter STT models) built
+> in; LLM calls run through a thin proxy on the integrator's backend so no key
+> ever ships to the browser.
+
+## Docs
+
+- [Integration guide](https://github.com/gametorch/ibh/blob/main/docs/integration-guide.md): install, manifest authoring, auth adapters, LLM access modes (proxy vs BYO user key), theming, framework notes
+- [Capability manifest spec](https://github.com/gametorch/ibh/blob/main/docs/manifest-spec.md): the hard contract — api/dom/nav capabilities, consent tiers, schemas, policies, fail-closed validation rules
+- [Security model](https://github.com/gametorch/ibh/blob/main/docs/security-model.md): enforcement stack, consent tiers, prompt-injection hardening, honest limits (best-effort client-side; server-side authorization is the real boundary)
+- [Non-goals](https://github.com/gametorch/ibh/blob/main/docs/non-goals.md): no undo (ever), no library consent defaults, no raw model network access
+- [AGENTS.md](https://github.com/gametorch/ibh/blob/main/AGENTS.md): the same integration playbook, written for AI coding agents
+
+## Proxy reference implementations (LLM access without key leakage)
+
+Integrators run two proxy routes on their backend (`{llm.baseUrl}/chat/completions`
+and `/audio/transcriptions`): authenticate with the existing session, enforce the
+model allowlist server-side, forward to OpenRouter with the server-side key, strip
+user cookies. References to translate or deploy:
+
+- [Proxy overview + contract](https://github.com/gametorch/ibh/blob/main/examples/proxy/README.md): the ~40-line contract, Next.js and Cloudflare snippets
+- [Pure node server](https://github.com/gametorch/ibh/blob/main/examples/proxy/server.js): zero dependencies
+- [Cloudflare Worker](https://github.com/gametorch/ibh/blob/main/examples/proxy/cloudflare/README.md): deployable, tested, full docs (JWT-HS256 or remote session verify)
+- [nginx config](https://github.com/gametorch/ibh/blob/main/examples/proxy/nginx.conf.example): config-only via auth_request; one-hardcoded-model tradeoff
+- [Apache config](https://github.com/gametorch/ibh/blob/main/examples/proxy/apache.conf.example): config-only via mod_auth_openidc / mod_authnz_fcgi
+- [Rust / Rocket server](https://github.com/gametorch/ibh/blob/main/examples/proxy/rocket/README.md): compiled binary, exact-pinned deps
+
+## Examples
+
+- [gametorch-demo](https://github.com/gametorch/ibh/blob/main/examples/gametorch-demo/): the reference integration (mock API, dashboard, editor, auto sign-in)
+- [plain-html](https://github.com/gametorch/ibh/blob/main/examples/plain-html/): minimal integration on a static page
+- [React / Next.js guide](https://github.com/gametorch/ibh/blob/main/examples/react-next/README.md)
+- [Vue / Nuxt guide](https://github.com/gametorch/ibh/blob/main/examples/vue/README.md)
+- [Angular guide](https://github.com/gametorch/ibh/blob/main/examples/angular/README.md)
+- [Svelte / SvelteKit guide](https://github.com/gametorch/ibh/blob/main/examples/svelte/README.md)
+- [Solid / SolidStart guide](https://github.com/gametorch/ibh/blob/main/examples/solid/README.md)
+
+## Packages (npm, official gametorch account)
+
+- [`@gametorch/ibh`](https://www.npmjs.com/package/@gametorch/ibh): self-contained umbrella — `init()`, IIFE + ESM bundle
+- [`@gametorch/ibh-react`](https://www.npmjs.com/package/@gametorch/ibh-react): drop-in `<IbhChat />`
+- [`@gametorch/ibh-vue`](https://www.npmjs.com/package/@gametorch/ibh-vue): drop-in `<IbhChat>`
+- [`@gametorch/ibh-angular`](https://www.npmjs.com/package/@gametorch/ibh-angular): `<ibh-chat>` standalone directive
+- [`@gametorch/ibh-svelte`](https://www.npmjs.com/package/@gametorch/ibh-svelte): `<IbhChat>` + `use:ibhChat` action
+- [`@gametorch/ibh-solid`](https://www.npmjs.com/package/@gametorch/ibh-solid): `<IbhChat>` + `use:ibhChat` directive

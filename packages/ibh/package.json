@@ -1,0 +1,48 @@
+{
+  "name": "@gametorch/ibh",
+  "version": "0.1.0",
+  "description": "ibh \u2014 the application-agnostic in-browser agent harness. Drop-in on any site; every action is gated by an explicit capability manifest.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@ibh/core": "workspace:*",
+    "@ibh/executor": "workspace:*",
+    "@ibh/policy": "workspace:*",
+    "@ibh/ui": "workspace:*"
+  },
+  "keywords": [
+    "gametorch",
+    "ibh",
+    "agent",
+    "in-browser",
+    "harness",
+    "chatbot",
+    "ai"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gametorch/ibh.git"
+  },
+  "homepage": "https://gametorch.app",
+  "prepack": "pnpm -w build"
+}

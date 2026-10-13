@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GameTorch</title>
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <a class="brand-link" href="/"><h1>GameTorch</h1></a>
+    <span id="me" class="muted small"></span>
+    <div class="spacer"></div>
+    <div class="theme-picker" role="group" aria-label="Theme">
+      <button type="button" data-theme-opt="light" title="Light theme" aria-label="Light theme">☀</button>
+      <button type="button" data-theme-opt="dark" title="Dark theme" aria-label="Dark theme">☾</button>
+      <button type="button" data-theme-opt="system" title="Follow system" aria-label="Follow system theme">◐</button>
+    </div>
+  </header>
+
+  <!-- Single-page app: the router renders the dashboard or the editor into #view -->
+  <main id="view"></main>
+
+  <script src="/ibh.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

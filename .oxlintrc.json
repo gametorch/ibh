@@ -1,0 +1,83 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "promise",
+    "node",
+    "react",
+    "vue"
+  ],
+  "categories": {
+    "correctness": "deny",
+    "suspicious": "deny",
+    "pedantic": "deny",
+    "perf": "deny"
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/target/**",
+    "**/node_modules/**",
+    "coverage",
+    "pnpm-lock.yaml"
+  ],
+  "rules": {
+    "no-await-in-loop": "off",
+    "consistent-function-scoping": "off",
+    "no-underscore-dangle": "off",
+    "no-inline-comments": "off",
+    "prefer-dom-node-dataset": "off",
+    "max-classes-per-file": "off",
+    "max-lines": [
+      "error",
+      {
+        "max": 700
+      }
+    ],
+    "max-lines-per-function": [
+      "error",
+      {
+        "max": 160,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "max-depth": [
+      "error",
+      4
+    ],
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ],
+    "react/react-in-jsx-scope": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.js"
+      ],
+      "rules": {
+        "require-await": "off",
+        "max-lines-per-function": "off",
+        "max-lines": "off",
+        "max-depth": "off"
+      }
+    },
+    {
+      "files": [
+        "packages/policy/src/validate.ts"
+      ],
+      "rules": {
+        "no-negated-condition": "off"
+      }
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+# ============================================================================
+# ibh LLM proxy — nginx-only variant (no application code, no model allowlist)
+# ============================================================================
+# Point ibh at it:  llm: { baseUrl: '/api/ibh-llm' }   (no key in the page)
+#
+# Tradeoff (documented, intentional): plain nginx cannot inspect the JSON body,
+# so the model allowlist is NOT enforced here (option "a" in docs). Rely on:
+#   1. The client-side manifest — llm.allowedModels with ONE hardcoded model
+#      (defaultModel = that model) so there is nothing to allowlist at all.
+#   2. An OpenRouter PER-KEY SPEND CAP as the real server-side bound.
+# If you need server-side model filtering, use the node/njs/Lua variants in
+# examples/proxy/ instead.
+#
+# Deployment notes:
+# - limit_req_zone must live in the http{} context; paste the location blocks
+#   into your existing server{} or include this whole file as a server block.
+# - /_ibh_auth is an internal endpoint your APP must serve: it validates the
+#   caller's session cookie and returns 2xx (ok) or 4xx/5xx (reject). It runs
+#   on EVERY proxy request — keep it cheap (no DB where avoidable, short TTL
+#   caches welcome).
+# ============================================================================
+
+# --- secret (do NOT commit real keys): /etc/nginx/ibh-secrets.conf ----------
+#   set $openrouter_key "sk-or-...";
+# chmod 600 /etc/nginx/ibh-secrets.conf && chown root:root
+include /etc/nginx/ibh-secrets.conf;
+
+# Rate limit: per-IP, 10 requests/min with small bursts (see README caveat 3
+# for per-user keying options).
+limit_req_zone $binary_remote_addr zone=ibh_llm:10m rate=10r/m;
+
+server {
+    listen 443 ssl;
+    server_name gametorch.app;
+    # ssl_certificate     /etc/letsencrypt/live/gametorch.app/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/gametorch.app/privkey.pem;
+
+    # --- session gate: your app decides who may use the proxy ----------------
+    # Runs with the caller's cookies. MUST reject unauthenticated callers with
+    # a non-2xx status. Caveat 2: this subrequest fires on every proxied
+    # request — keep the verify endpoint fast (cheap session decode / cache).
+    location = /_ibh_auth {
+        internal;
+        proxy_pass http://127.0.0.1:3000/session/verify;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-Method $request_method;
+        proxy_set_header X-Original-URI   $request_uri;
+    }
+
+    # --- chat completions -----------------------------------------------------
+    location = /api/ibh-llm/chat/completions {
+        limit_req zone=ibh_llm burst=10 nodelay;   # caveat 3: per-IP, see README
+        limit_except POST { deny all; }
+        client_max_body_size 1m;
+
+        auth_request /_ibh_auth;
+
+        proxy_pass https://openrouter.ai/api/v1/chat/completions;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        # verify the upstream certificate — proxy_ssl_verify is OFF by default,
+        # which would leave the server->OpenRouter leg MITM-able
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+
+        # Always overwrite — never forward client-supplied auth headers — and
+        # PRIVACY: the user's session Cookie must never reach openrouter.ai.
+        proxy_set_header Authorization "Bearer $openrouter_key";
+        proxy_set_header X-Title "ibh";
+        proxy_set_header Content-Type $content_type;
+        proxy_set_header Cookie "";
+
+        # Caveat 4: model calls are slow; ibh's own client timeout is 120s.
+        proxy_read_timeout 180s;
+        proxy_send_timeout 60s;
+        # Required only if you later enable streaming; harmless as a default.
+        proxy_buffering off;
+    }
+
+    # --- speech-to-text (ui.stt) ----------------------------------------------
+    location = /api/ibh-llm/audio/transcriptions {
+        limit_req zone=ibh_llm burst=10 nodelay;
+        limit_except POST { deny all; }
+        client_max_body_size 8m;
+
+        auth_request /_ibh_auth;
+
+        proxy_pass https://openrouter.ai/api/v1/audio/transcriptions;
+        proxy_http_version 1.1;
+        proxy_ssl_server_name on;
+        # verify the upstream certificate — proxy_ssl_verify is OFF by default,
+        # which would leave the server->OpenRouter leg MITM-able
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_ssl_verify_depth 2;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+
+        proxy_set_header Authorization "Bearer $openrouter_key";
+        proxy_set_header X-Title "ibh";
+        proxy_set_header Content-Type $content_type;
+        proxy_set_header Cookie "";
+
+        proxy_read_timeout 180s;
+        proxy_send_timeout 60s;
+        proxy_buffering off;
+    }
+
+    # Any other /api/ibh-llm/* path does not exist as a location -> nginx
+    # serves your normal routes / default 404. That IS the path allowlist:
+    # exactly two endpoints are proxied, nothing else can be reached.
+
+    # your application
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+    }
+}

@@ -1,0 +1,59 @@
+{
+  "name": "@gametorch/ibh-svelte",
+  "version": "0.1.0",
+  "description": "Svelte 5 bindings for ibh \u2014 a drop-in <IbhChat /> component and use:ibhChat action, gated by a capability manifest.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./src/IbhChat.svelte",
+      "default": "./src/index.ts"
+    },
+    "./action": {
+      "types": "./dist/action.d.ts",
+      "default": "./src/action.ts"
+    },
+    "./IbhChat.svelte": {
+      "types": "./src/IbhChat.svelte.d.ts",
+      "svelte": "./src/IbhChat.svelte"
+    }
+  },
+  "files": [
+    "dist",
+    "src/IbhChat.svelte",
+    "src/IbhChat.svelte.d.ts",
+    "src/index.ts",
+    "src/action.ts",
+    "src/types.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc --emitDeclarationOnly && cp src/IbhChat.svelte.d.ts dist/IbhChat.svelte.d.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gametorch/ibh": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "keywords": [
+    "gametorch",
+    "ibh",
+    "svelte",
+    "agent",
+    "chatbot",
+    "ai"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gametorch/ibh.git"
+  },
+  "homepage": "https://gametorch.app",
+  "prepack": "pnpm -w build"
+}

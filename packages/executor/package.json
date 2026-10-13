@@ -1,0 +1,24 @@
+{
+  "name": "@ibh/executor",
+  "version": "0.1.0",
+  "description": "ibh gatekeeper: intent validation, policy enforcement, consent flow, audit ledger and site adapters (fetch/dom/nav/analyze).",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ibh/policy": "workspace:*"
+  },
+  "private": true
+}

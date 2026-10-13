@@ -1,0 +1,50 @@
+{
+  "name": "@gametorch/ibh-vue",
+  "version": "0.1.0",
+  "description": "Vue 3 bindings for ibh \u2014 a drop-in <IbhChat /> in-browser agent component gated by a capability manifest.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gametorch/ibh": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.13"
+  },
+  "keywords": [
+    "gametorch",
+    "ibh",
+    "vue",
+    "agent",
+    "chatbot",
+    "ai"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gametorch/ibh.git"
+  },
+  "homepage": "https://gametorch.app",
+  "prepack": "pnpm -w build"
+}

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ibh plain-html example</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; line-height: 1.5; }
+    li { margin: 4px 0; }
+    code { background: #f2f2f7; padding: 1px 5px; border-radius: 4px; }
+    .demo-note { background: #fff8e1; border: 1px solid #e0c86a; border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>ibh — plain HTML example</h1>
+  <p>This page demonstrates the absolute minimum ibh integration: one script tag,
+     one manifest, cookie auth, and a fetch shim that mocks an API.</p>
+  <div class="demo-note"><b>Demo only:</b> the fetch shim below fakes <code>/api/*</code>
+     responses in-page so the example needs no server-side API.</div>
+
+  <h2>Notes</h2>
+  <ul id="notes" data-ibh-region="notes"></ul>
+  <form id="note-form">
+    <input data-ibh-action="note-input" id="note-input" placeholder="New note…" />
+    <button data-ibh-action="add-note">Add</button>
+  </form>
+
+  <p>Try asking ibh: “summarize my notes” or “add a note that says hello”.</p>
+
+  <!-- The harness bundle (built by `pnpm build`). -->
+  <script src="/ibh.js"></script>
+
+  <script>
+    // ---- DEMO ONLY: in-page mock API -------------------------------------
+    const realFetch = window.fetch.bind(window);
+    const notes = [
+      { id: 1, text: 'Water the plants', done: false },
+      { id: 2, text: 'Ship the ibh demo', done: true },
+    ];
+    let nextId = 3;
+    window.fetch = async (input, init = {}) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (!url.startsWith('/api/')) return realFetch(input, init);
+      await new Promise((r) => setTimeout(r, 250));
+      const method = (init.method ?? 'GET').toUpperCase();
+      const respond = (status, body) =>
+        new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+      if (url === '/api/notes' && method === 'GET') return respond(200, { notes });
+      if (url === '/api/notes' && method === 'POST') {
+        const body = JSON.parse(init.body ?? '{}');
+        if (typeof body.text !== 'string' || !body.text.trim()) return respond(400, { error: 'text is required' });
+        const note = { id: nextId++, text: body.text.trim(), done: false };
+        notes.push(note);
+        // The page reacts to its own API events — so ibh-driven changes update the UI too.
+        window.dispatchEvent(new CustomEvent('demo:notes-changed'));
+        return respond(201, { note });
+      }
+      return respond(404, { error: 'no such mock route' });
+    };
+
+    // ---- page rendering ---------------------------------------------------
+    const list = document.getElementById('notes');
+    const render = () => {
+      list.textContent = '';
+      for (const n of notes) {
+        const li = document.createElement('li');
+        li.textContent = `${n.done ? '✓' : '•'} ${n.text}`;
+        list.appendChild(li);
+      }
+    };
+    render();
+    window.addEventListener('demo:notes-changed', render);
+    document.getElementById('note-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('note-input');
+      if (!input.value.trim()) return;
+      await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: input.value }),
+      });
+      input.value = '';
+    });
+
+    // ---- ibh --------------------------------------------------------------
+    const KEY_STORE = 'ibh-plain-demo-key';
+    let openRouterKey = localStorage.getItem(KEY_STORE) ?? '';
+    if (!openRouterKey) {
+      openRouterKey = prompt('OpenRouter API key (stored in localStorage):') ?? '';
+      localStorage.setItem(KEY_STORE, openRouterKey);
+    }
+
+    window.ibhInstance = window.ibh.init({
+      manifest: {
+        version: 1,
+        site: { name: 'Plain Demo', origin: location.origin },
+        api: [
+          { id: 'notes_list', method: 'GET', path: '/api/notes', tier: 'auto', description: 'List all notes.' },
+          {
+            id: 'notes_create',
+            method: 'POST',
+            path: '/api/notes',
+            tier: 'confirm',
+            description: 'Create a note.',
+            argSchema: { type: 'object', properties: { text: { type: 'string', minLength: 1, maxLength: 200 } }, required: ['text'], additionalProperties: false },
+          },
+        ],
+        policies: { maxMutatingActionsPerSession: 10 },
+        llm: { allowedModels: ['openai/gpt-6-luna'], defaultModel: 'openai/gpt-6-luna' },
+      },
+      guide: 'This is a notes app. Notes are {id, text, done}. The page re-renders automatically whenever a note is created, so no refresh is needed after notes_create.',
+      auth: { mode: 'cookie' },
+      llm: { openRouterKey },
+    });
+  </script>
+</body>
+</html>
