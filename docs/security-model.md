@@ -21,8 +21,10 @@
    consent preview always matches exactly what executes.
 3. **Consent tiers.** `auto` / `session` / `confirm` / `denied` — set explicitly per
    capability by the host. ibh has **no library default** and **fails closed**: with
-   no consent UI connected, everything above `auto` is denied; headless deployments
-   should keep mutating tiers at `denied`.
+   no consent UI connected, everything above `auto` is denied. Headless deployments
+   (`ui.enabled: false`) therefore deny mutations by default; a host that wants them
+   must opt in by supplying a `consent` handler and takes responsibility for
+   obtaining the user's approval.
 4. **Confirmation cards.** For `confirm` capabilities the user sees the exact HTTP
    method + path + payload preview, or the exact element about to be acted on.
    Page content cannot approve a card; only the user can.
@@ -105,5 +107,20 @@ agent well-behaved, and never as your only line of defense.
 - No default consent behavior — the host must configure every tier.
 - No cross-origin API calls or navigation, ever.
 - No credential storage, parsing, or transmission beyond what the auth adapter does.
-- No persistence across page loads (history, audit log, session approvals) — a
-  refresh starts a clean session.
+- No persistence by default — history, the audit log and session approvals live in
+  memory, and a refresh starts a clean session. A host can opt in with
+  `persistence: { enabled: true }`; ibh then stores that state in localStorage and
+  restores it on the next load. Budgets, rate limits and token spend are never
+  persisted, so a refresh always resets them.
+
+Two behaviors are safe-by-default but overridable, and both move responsibility to
+the host when overridden:
+
+- **Headless mutations.** With `ui.enabled: false` there is no consent surface, so
+  every capability above `auto` is denied. Supplying a `consent` handler opts in to
+  executing them without the panel. If that handler unconditionally approves, the
+  user is no longer watching — only do this for trusted automation, and keep
+  mutating tiers out of the manifest where a human should decide.
+- **Persistence.** When enabled, conversation content and the audit log are written
+  to localStorage, which is readable by any script on the origin. Do not enable it
+  on shared machines or for sessions carrying sensitive data.

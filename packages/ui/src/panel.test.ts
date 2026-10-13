@@ -24,6 +24,7 @@ function makeController(siteName = 'TestSite') {
     stop: () => {},
     isRunning: () => running,
     clearConversation: () => {},
+    getHistory: () => [],
     onRunningChange: (cb) => {
       listeners.running.add(cb);
       return () => listeners.running.delete(cb);

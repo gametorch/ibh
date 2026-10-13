@@ -6,6 +6,7 @@ import type { AuditEntry, ConsentRequest, ToolOutcome, AuthAdapter, DomExecutor 
 import { AnalyzeAdapter, AuditLedger, DomAdapter, FetchAdapter, Gatekeeper, NavAdapter } from '@ibh/executor';
 import type { IbhUiController, IbhUiHandle, UiTheme } from '@ibh/ui';
 import { mountIbhUi } from '@ibh/ui';
+import { createSessionPersistence } from './persistence';
 
 export type { IbhManifest, AuthAdapter, AuditEntry, ConsentRequest, ToolOutcome, AgentSession, IbhUiHandle, UiTheme };
 
@@ -77,6 +78,26 @@ export interface IbhConfig {
       bottom?: number;
     };
   };
+  /**
+   * Opt-in session persistence. Off by default: conversation history, the audit
+   * log and session approvals live in memory and a refresh starts a clean
+   * session. When enabled, ibh stores them in localStorage and restores them on
+   * the next init. Budgets, rate limits and token spend are NOT persisted.
+   */
+  persistence?: {
+    enabled?: boolean;
+    /** localStorage key. Defaults to `ibh:session`. */
+    key?: string;
+  };
+  /**
+   * Consent handler used when the panel UI is disabled (headless mode). Headless
+   * mode has no consent surface, so by default every capability above `auto` is
+   * denied (fail-closed). Supplying this opts in to executing consented actions
+   * without the panel — e.g. a native dialog, a host-rendered prompt, or (for
+   * trusted automation) unconditional approval. When the panel UI is enabled it
+   * handles consent and this is ignored.
+   */
+  consent?: (req: ConsentRequest) => boolean | Promise<boolean>;
   nav?: {
     /** Hook for hosts whose router is not plain history-based (e.g. Next.js App Router). */
     customNavigate?: (url: string) => void | Promise<void>;
@@ -210,6 +231,12 @@ class ControllerBridge implements IbhUiController {
   getAudit(): readonly AuditEntry[] {
     return this.ledger.getEntries();
   }
+
+  /** Set by init(): returns the displayable conversation history for panel restore. */
+  historyProvider: () => Array<{ role: 'user' | 'assistant'; text: string }> = () => [];
+  getHistory(): Array<{ role: 'user' | 'assistant'; text: string }> {
+    return this.historyProvider();
+  }
 }
 
 /**
@@ -238,6 +265,14 @@ export function init(config: IbhConfig): IbhInstance {
   const bridge = new ControllerBridge(config.manifest.site.name, ledger);
   const uiRef: { current: IbhUiHandle | null } = { current: null };
 
+  // Consent: the panel is the surface when the UI is on. In headless mode there
+  // is none by default (fail-closed), unless the host supplies a handler.
+  const consent = uiEnabled
+    ? { request: async (req: ConsentRequest) => (await uiRef.current?.requestConsent(req)) === true }
+    : config.consent
+      ? { request: (req: ConsentRequest) => Promise.resolve(config.consent!(req)) }
+      : undefined;
+
   const gate = new Gatekeeper({
     manifest: config.manifest,
     policy,
@@ -246,9 +281,7 @@ export function init(config: IbhConfig): IbhInstance {
     nav: navAdapter,
     analyze: analyzeAdapter,
     ledger,
-    consent: uiEnabled
-      ? { request: async (req: ConsentRequest) => (await uiRef.current?.requestConsent(req)) === true }
-      : undefined,
+    consent,
   });
 
   const client = new OpenRouterClient({
@@ -269,9 +302,34 @@ export function init(config: IbhConfig): IbhInstance {
     hooks: bridge.hooks(),
   });
 
-  bridge.sessionRun = (text) => session.run(text);
+  const persistence = config.persistence?.enabled
+    ? createSessionPersistence(config.persistence.key ?? 'ibh:session')
+    : null;
+  const persistNow = () => {
+    if (!persistence) return;
+    persistence.save({ history: session.history, audit: ledger.getEntries(), approved: gate.getSessionApproved() });
+  };
+  if (persistence) {
+    const saved = persistence.load();
+    if (saved) {
+      session.restoreHistory(saved.history);
+      ledger.hydrate(saved.audit);
+      gate.hydrateApprovals(saved.approved);
+    }
+    ledger.subscribe(() => persistNow());
+  }
+
+  bridge.historyProvider = () => session.displayHistory();
+  bridge.sessionRun = async (text) => {
+    const result = await session.run(text);
+    persistNow();
+    return result;
+  };
   bridge.sessionStop = () => session.stop();
-  bridge.sessionClear = () => session.clear();
+  bridge.sessionClear = () => {
+    session.clear();
+    persistNow();
+  };
 
   let ui: IbhUiHandle | null = null;
   if (uiEnabled) {
@@ -321,6 +379,7 @@ export interface AutoInitConfig {
   guide?: string;
   llm: { openRouterKey: string; baseUrl?: string };
   ui?: IbhConfig['ui'];
+  persistence?: IbhConfig['persistence'];
 }
 
 declare global {
@@ -341,6 +400,7 @@ function autoInit(): void {
       guide: cfg.guide,
       llm: cfg.llm,
       ui: cfg.ui,
+      persistence: cfg.persistence,
       auth: { mode: 'cookie' },
     });
   } catch (e) {

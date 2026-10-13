@@ -42,6 +42,12 @@ export class AuditLedger {
     return this.entries;
   }
 
+  /** Seed the ledger from a persisted session. Ids continue after the highest restored entry. */
+  hydrate(entries: readonly AuditEntry[]): void {
+    this.entries = entries.slice(-MAX_ENTRIES);
+    this.nextId = this.entries.reduce((max, e) => Math.max(max, e.id), 0) + 1;
+  }
+
   subscribe(cb: (e: AuditEntry) => void): () => void {
     this.subscribers.add(cb);
     return () => this.subscribers.delete(cb);

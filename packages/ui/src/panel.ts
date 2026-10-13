@@ -300,7 +300,11 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
     if (open) {
       input.focus();
       auditView.textContent = '';
-      for (const e of controller.getAudit()) renderAuditEntry(e);
+  for (const e of controller.getAudit()) renderAuditEntry(e);
+
+  // Restore an opted-in persisted conversation so a refresh resumes the chat.
+  for (const m of controller.getHistory()) addMessage(m.text, m.role);
+
     }
   };
   applyOpen();

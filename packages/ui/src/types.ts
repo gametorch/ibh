@@ -2,6 +2,12 @@ import type { AuditEntry, ConsentRequest, ToolOutcome } from '@ibh/core';
 
 export type UiTheme = 'light' | 'dark' | 'system';
 
+/** A displayable conversation turn (used to restore an opted-in persisted session). */
+export interface IbhHistoryMessage {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
 /** The interface the ibh umbrella provides to the UI layer. Keeps ui decoupled from wiring. */
 export interface IbhUiController {
   getSiteName(): string;
@@ -9,6 +15,8 @@ export interface IbhUiController {
   stop(): void;
   isRunning(): boolean;
   clearConversation(): void;
+  /** Conversation turns already in the session (persisted history renders on mount). */
+  getHistory(): readonly IbhHistoryMessage[];
   onRunningChange(cb: (running: boolean) => void): () => void;
   onStatus(cb: (text: string) => void): () => void;
   onAssistant(cb: (text: string) => void): () => void;

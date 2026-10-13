@@ -50,8 +50,9 @@ use cases beyond chat:
   form prefill where each step is a real, consented capability call
 - **Programmatic/headless integrations** — `ui: { enabled: false }` plus
   `instance.send()` / `instance.audit()` to drive the harness from your own UI,
-  tests or scripts (fail-closed: without a consent UI, mutating tiers are denied —
-  see [security model](docs/security-model.md))
+  tests or scripts (fail-closed: without a consent UI, mutating tiers are denied
+  unless you supply a `consent` handler — see
+  [security model](docs/security-model.md))
 - **Accessibility & voice** — STT is built in; the agent navigates and acts for
   users who can't use a mouse
 

@@ -13,9 +13,9 @@ capability manifest explicitly allows.
 > data answers, guided multi-step flows that do real work, accessibility/voice
 > agents (STT is built in), and headless/programmatic use
 > (`ui.enabled: false` + `instance.send()` — fail-closed: without a consent UI,
-> mutating tiers are denied). The [demo](../examples/gametorch-demo/) shows the
-> chat experience; the manifest spec is the part that defines what ibh *can*
-> do in your product.
+> mutating tiers are denied unless you supply a `consent` handler). The
+> [demo](../examples/gametorch-demo/) shows the chat experience; the manifest spec
+> is the part that defines what ibh *can* do in your product.
 
 ## 1. Install / build
 
@@ -72,8 +72,43 @@ the user did not mention.`,
 | `auth`          | `{ mode: 'cookie' }`, `{ mode: 'token', getToken: async () => … }` or `{ mode: 'custom', applyAuth }`. |
 | `llm`           | `{ openRouterKey?, baseUrl?, headers? }`. Three modes — see "LLM access" below. Production: point `baseUrl` at your backend proxy (no key in the page); pure frontend: BYO *user* key. A shared site key in the page is refused by init. |
 | `ui`            | `{ enabled?, accent?, startOpen?, theme?, hideThemePicker?, showClearConversation?, showAuditTab?, stt?, style?, css?, defaultPosition? }`. `enabled: false` = headless (see security note). Theming & placement: see below. |
+| `persistence`   | `{ enabled?, key? }`. Off by default — history, audit log and session approvals live in memory and a refresh starts clean. Enable to store them in localStorage (default key `ibh:session`) and resume on the next load. Budgets/rate limits are never persisted. |
+| `consent`       | `(req) => boolean \| Promise<boolean>` used only in headless mode (`ui.enabled: false`). Without it, everything above `auto` is denied (fail-closed). Supplying it opts in to executing consented actions without the panel. |
 | `nav`           | `{ customNavigate?: (url) => void }` for framework routers (e.g. Next.js App Router).       |
 | `dom`           | `{ snapshotBudgetNodes? }` to tighten the snapshot budget.                                   |
+
+### Session persistence
+
+By default a refresh starts a clean session: the conversation, the audit log and
+one-time `session`-tier approvals all live in memory. To resume across page loads,
+opt in:
+
+```js
+ibh.init({ /* ... */ persistence: { enabled: true } }); // key defaults to 'ibh:session'
+```
+
+ibh then writes history, the audit log and session approvals to localStorage and
+restores them on the next `init()`. Budgets, rate limits and token spend are
+**not** persisted, so a refresh always resets them. Because localStorage is
+readable by any script on the origin, leave this off for sensitive sessions.
+
+### Headless consent
+
+With `ui: { enabled: false }` there is no consent surface, so every capability
+above `auto` is denied (fail-closed). For trusted automation you can take over
+consent explicitly:
+
+```js
+ibh.init({
+  /* ... */ ui: { enabled: false },
+  consent: async (req) => nativeConfirm(`Allow ${req.capabilityId}?`), // or () => true to auto-approve
+});
+```
+
+The handler receives the same `ConsentRequest` the panel would show (capability
+id, action summary, detail lines). If it unconditionally returns `true`, mutating
+actions run with nobody watching — only do that for trusted automation, and keep
+capabilities that need a human decision out of the manifest.
 
 ## 4. LLM access: keys and proxies
 

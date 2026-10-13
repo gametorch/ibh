@@ -12,7 +12,7 @@
 
 ## Docs
 
-- [Integration guide](https://github.com/gametorch/ibh/blob/main/docs/integration-guide.md): install, manifest authoring, auth adapters, LLM access modes (proxy vs BYO user key), theming, framework notes
+- [Integration guide](https://github.com/gametorch/ibh/blob/main/docs/integration-guide.md): install, manifest authoring, auth adapters, LLM access modes (proxy vs BYO user key), theming, opt-in session persistence, headless consent, framework notes
 - [Capability manifest spec](https://github.com/gametorch/ibh/blob/main/docs/manifest-spec.md): the hard contract — api/dom/nav capabilities, consent tiers, schemas, policies, fail-closed validation rules
 - [Security model](https://github.com/gametorch/ibh/blob/main/docs/security-model.md): enforcement stack, consent tiers, prompt-injection hardening, honest limits (best-effort client-side; server-side authorization is the real boundary)
 - [Non-goals](https://github.com/gametorch/ibh/blob/main/docs/non-goals.md): no undo (ever), no library consent defaults, no raw model network access

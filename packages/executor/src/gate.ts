@@ -89,6 +89,11 @@ export class Gatekeeper {
     return [...this.sessionApproved];
   }
 
+  /** Seed session approvals from a persisted session (opt-in persistence). */
+  hydrateApprovals(ids: readonly string[]): void {
+    for (const id of ids) this.sessionApproved.add(id);
+  }
+
   resetSessionApprovals(): void {
     this.sessionApproved.clear();
   }

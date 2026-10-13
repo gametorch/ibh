@@ -117,6 +117,22 @@ export class AgentSession {
     this.history = [];
   }
 
+  /** Replace the conversation history (used to restore an opted-in persisted session). */
+  restoreHistory(messages: readonly ChatMessage[]): void {
+    this.history = messages.map((m) => ({ ...m }));
+  }
+
+  /** User/assistant messages with text, in order — the panel renders these. */
+  displayHistory(): Array<{ role: 'user' | 'assistant'; text: string }> {
+    const out: Array<{ role: 'user' | 'assistant'; text: string }> = [];
+    for (const m of this.history) {
+      if ((m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim().length > 0) {
+        out.push({ role: m.role, text: m.content });
+      }
+    }
+    return out;
+  }
+
   /** Execute one model tool call through the gatekeeper and return the tool-message payload. */
   private async executeToolCall(
     tc: ToolCall,

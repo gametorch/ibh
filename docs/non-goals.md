@@ -30,15 +30,3 @@ manifest a real contract rather than a suggestion.
 ibh acts only within `manifest.site.origin`. It never reads, stores, or moves
 credentials between sites, and its API calls can only ever carry the host's own
 session forward.
-
-## 5. No session persistence across page loads
-
-History, audit log, and session approvals live in memory. A refresh is a clean
-session. Persistent agent state would turn a browsing assistant into an ambient
-daemon — out of scope.
-
-## 6. No headless mutating actions
-
-`ui.enabled: false` (headless mode) removes the consent UI, so by fail-closed
-construction every capability above `auto` is denied. ibh will never ship a mode
-where mutating actions execute without a user watching.
