@@ -1,6 +1,6 @@
 {
   "name": "@gametorch/ibh",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ibh \u2014 the application-agnostic in-browser agent harness. Drop-in on any site; every action is gated by an explicit capability manifest.",
   "license": "MIT",
   "type": "module",

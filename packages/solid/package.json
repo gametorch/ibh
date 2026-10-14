@@ -1,6 +1,6 @@
 {
   "name": "@gametorch/ibh-solid",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SolidJS bindings for ibh \u2014 a drop-in <IbhChat /> component and use:ibhChat directive, gated by a capability manifest.",
   "license": "MIT",
   "type": "module",

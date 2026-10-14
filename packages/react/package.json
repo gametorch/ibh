@@ -1,6 +1,6 @@
 {
   "name": "@gametorch/ibh-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React bindings for ibh \u2014 a drop-in <IbhChat /> in-browser agent component gated by a capability manifest.",
   "license": "MIT",
   "type": "module",
