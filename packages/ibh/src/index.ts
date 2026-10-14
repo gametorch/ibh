@@ -3,7 +3,7 @@ import { PolicyEngine, validateManifest } from '@ibh/policy';
 import type { AgentHooks, ImageAttachment } from '@ibh/core';
 import { AgentSession, OpenRouterClient } from '@ibh/core';
 import type { AuditEntry, ConsentRequest, ToolOutcome, AuthAdapter, DomExecutor } from '@ibh/executor';
-import { AnalyzeAdapter, AuditLedger, DomAdapter, FetchAdapter, Gatekeeper, NavAdapter } from '@ibh/executor';
+import { AnalyzeAdapter, AuditLedger, DomAdapter, FetchAdapter, Gatekeeper, ImageAdapter, NavAdapter } from '@ibh/executor';
 import type { IbhUiController, IbhUiHandle, IbhHistoryMessage, UiTheme } from '@ibh/ui';
 import { mountIbhUi } from '@ibh/ui';
 import { createSessionPersistence } from './persistence';
@@ -281,6 +281,7 @@ export function init(config: IbhConfig): IbhInstance {
     customNavigate: config.nav?.customNavigate,
   });
   const analyzeAdapter = new AnalyzeAdapter();
+  const imageAdapter = new ImageAdapter({ siteOrigin: config.manifest.site.origin, dom });
 
   const uiEnabled = config.ui?.enabled !== false;
   const bridge = new ControllerBridge(config.manifest.site.name, ledger);
@@ -301,6 +302,7 @@ export function init(config: IbhConfig): IbhInstance {
     dom,
     nav: navAdapter,
     analyze: analyzeAdapter,
+    image: imageAdapter,
     ledger,
     consent,
   });

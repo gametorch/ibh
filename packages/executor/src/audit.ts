@@ -3,7 +3,7 @@
  * denied, failed. There is deliberately NO undo mechanism; see docs/non-goals.md.
  */
 
-export type AuditKind = 'api' | 'dom' | 'nav' | 'analyze' | 'page_snapshot' | 'llm';
+export type AuditKind = 'api' | 'dom' | 'nav' | 'analyze' | 'page_snapshot' | 'image' | 'llm';
 
 export type AuditDecision = 'allow' | 'session' | 'confirm' | 'deny' | 'consent-denied' | 'error';
 

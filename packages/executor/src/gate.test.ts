@@ -217,6 +217,42 @@ describe('Gatekeeper', () => {
     expect(an.ok).toBe(true);
   });
 
+  it('routes attach_image to the image executor and returns the captured image', async () => {
+    const m = makeManifest();
+    const captures: unknown[] = [];
+    const gate = new Gatekeeper({
+      manifest: m,
+      policy: new PolicyEngine(m),
+      api: { async request() { return { status: 200, ok: true, body: null }; } },
+      dom: {
+        resolve: () => ({ el: null }),
+        describe: () => '',
+        act: () => ({ ok: true, summary: '' }),
+        snapshot: () => ({ url: '', title: '', tree: '', refs: {} }),
+      },
+      nav: { navigate: () => ({ ok: true, summary: '' }) },
+      analyze: { async run() { return null; } },
+      image: {
+        async capture(source) {
+          captures.push(source);
+          return { ok: true, summary: 'attached image "art"', image: { url: 'data:image/png;base64,AAA', name: 'art' } };
+        },
+      },
+      ledger: new AuditLedger(),
+    });
+    const r = await gate.resolve({ kind: 'builtin', name: 'attach_image', args: { svg: '<svg/>' } });
+    expect(r.ok).toBe(true);
+    expect(captures).toEqual([{ svg: '<svg/>' }]);
+    expect((r.result as { image?: { url: string } }).image?.url).toBe('data:image/png;base64,AAA');
+  });
+
+  it('denies attach_image when no image executor is configured (fail closed)', async () => {
+    const { gate } = makeDeps();
+    const r = await gate.resolve({ kind: 'builtin', name: 'attach_image', args: { svg: '<svg/>' } });
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('not configured');
+  });
+
   it('truncates oversized tool results', async () => {
     const m = makeManifest();
     const gate = new Gatekeeper({

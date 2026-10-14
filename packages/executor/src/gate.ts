@@ -3,6 +3,7 @@ import type { AuditDecision, AuditKind, AuditLedger } from './audit';
 import type { DomAction } from '@ibh/policy';
 import type { DomExecutor } from './adapters/dom';
 import type { AnalyzeExecutor } from './adapters/analyze';
+import type { ImageExecutor } from './adapters/image';
 import type { NavExecutor, NavMode } from './adapters/nav';
 import type { ApiFetcher } from './adapters/auth';
 import { tryInterpolatePath } from './adapters/fetch';
@@ -36,6 +37,8 @@ export interface GateDeps {
   dom: DomExecutor;
   nav: NavExecutor;
   analyze: AnalyzeExecutor;
+  /** Image capture for the attach_image builtin. When absent, attach_image is denied. */
+  image?: ImageExecutor;
   ledger: AuditLedger;
   /** When absent, every tier that requires consent is denied (fail closed). */
   consent?: ConsentPort;
@@ -68,6 +71,12 @@ const AUDIT_KIND: Record<CapabilityKind, AuditKind> = {
   dom: 'dom',
   nav: 'nav',
   builtin: 'page_snapshot',
+};
+
+const BUILTIN_AUDIT_KIND: Record<string, AuditKind> = {
+  page_snapshot: 'page_snapshot',
+  analyze: 'analyze',
+  attach_image: 'image',
 };
 
 /**
@@ -107,7 +116,7 @@ export class Gatekeeper {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.deps.ledger.append({
-        kind: intent.kind === 'builtin' && intent.name === 'analyze' ? 'analyze' : AUDIT_KIND[kind],
+        kind: intent.kind === 'builtin' ? (BUILTIN_AUDIT_KIND[intent.name] ?? 'page_snapshot') : AUDIT_KIND[kind],
         decision: 'error',
         summary: `${capabilityId}: ${msg}`,
       });
@@ -118,7 +127,7 @@ export class Gatekeeper {
   private async resolveInner(intent: Intent, kind: CapabilityKind, capabilityId: string): Promise<ToolOutcome> {
     const { policy, ledger } = this.deps;
     const auditKind: AuditKind =
-      intent.kind === 'builtin' ? (intent.name === 'analyze' ? 'analyze' : 'page_snapshot') : AUDIT_KIND[kind];
+      intent.kind === 'builtin' ? (BUILTIN_AUDIT_KIND[intent.name] ?? 'page_snapshot') : AUDIT_KIND[kind];
 
     if (intent.kind === 'builtin') {
       const decision = policy.evaluate('builtin', intent.name);
@@ -131,6 +140,21 @@ export class Gatekeeper {
         const snap = this.deps.dom.snapshot();
         ledger.append({ kind: 'page_snapshot', decision: 'allow', summary: `page snapshot of ${snap.url}` });
         return { ok: true, result: snap, decision: 'allow', capabilityId, kind };
+      }
+      if (intent.name === 'attach_image') {
+        if (!this.deps.image) {
+          const reason = 'image capture is not configured';
+          ledger.append({ kind: 'image', decision: 'deny', summary: `attach_image: ${reason}` });
+          return { ok: false, error: reason, decision: 'deny', capabilityId, kind };
+        }
+        policy.consumeRate('builtin', intent.name);
+        const r = await this.deps.image.capture(intent.args);
+        if (!r.ok) {
+          ledger.append({ kind: 'image', decision: 'error', summary: `attach_image: ${r.summary}` });
+          return { ok: false, error: r.summary, decision: 'deny', capabilityId, kind };
+        }
+        ledger.append({ kind: 'image', decision: 'allow', summary: r.summary, detail: { name: r.image?.name } });
+        return { ok: true, result: { summary: r.summary, image: r.image }, decision: 'allow', capabilityId, kind };
       }
       // analyze
       policy.consumeRate('builtin', intent.name);

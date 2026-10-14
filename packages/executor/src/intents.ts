@@ -1,4 +1,5 @@
 import type { CapabilityKind, DecisionStatus } from '@ibh/policy';
+import type { ImageCaptureSource } from './adapters/image';
 
 /**
  * Intents are the ONLY way the agent can act. The model never touches the network
@@ -25,14 +26,15 @@ export interface NavIntentArgs {
   params?: Record<string, string>;
 }
 
-export type BuiltinName = 'page_snapshot' | 'analyze';
+export type BuiltinName = 'page_snapshot' | 'analyze' | 'attach_image';
 
 export type Intent =
   | { kind: 'api'; capabilityId: string; args?: ApiIntentArgs }
   | { kind: 'dom'; capabilityId: string; args?: DomIntentArgs }
   | { kind: 'nav'; capabilityId: string; args?: NavIntentArgs }
   | { kind: 'builtin'; name: 'page_snapshot' }
-  | { kind: 'builtin'; name: 'analyze'; args: { code: string; data?: unknown } };
+  | { kind: 'builtin'; name: 'analyze'; args: { code: string; data?: unknown } }
+  | { kind: 'builtin'; name: 'attach_image'; args: ImageCaptureSource };
 
 export function intentKindToCapabilityKind(intent: Intent): CapabilityKind {
   switch (intent.kind) {

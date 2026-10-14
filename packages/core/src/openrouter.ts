@@ -43,6 +43,8 @@ export interface ImageAttachment {
   mime?: string;
   /** Optional size in bytes. */
   size?: number;
+  /** Optional vision detail hint passed to the model. */
+  detail?: 'auto' | 'low' | 'high';
 }
 
 export interface ChatMessage {
@@ -62,7 +64,10 @@ export function buildUserContent(text: string, images: readonly ImageAttachment[
   const parts: ContentPart[] = [];
   if (text.trim().length > 0) parts.push({ type: 'text', text });
   for (const image of images) {
-    parts.push({ type: 'image_url', image_url: { url: image.url } });
+    parts.push({
+      type: 'image_url',
+      image_url: image.detail ? { url: image.url, detail: image.detail } : { url: image.url },
+    });
   }
   return parts;
 }

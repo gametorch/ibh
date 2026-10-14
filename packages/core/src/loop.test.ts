@@ -140,6 +140,43 @@ describe('AgentSession (the gated loop)', () => {
     ]);
   });
 
+  it('injects an attach_image result as a user message the model can see', async () => {
+    const h = makeHarness();
+    h.gate.resolve = async (intent): Promise<ToolOutcome> => ({
+      ok: true,
+      decision: 'allow',
+      capabilityId: intent.kind === 'builtin' ? intent.name : intent.capabilityId,
+      kind: 'builtin',
+      result: { summary: 'attached image "art"', image: { url: 'data:image/png;base64,AAA', name: 'art' } },
+    });
+    let step = 0;
+    h.client.chat.mockImplementation(async (req: { messages?: ChatMessage[] }) => {
+      h.client.calls.push({ messages: req.messages });
+      step += 1;
+      if (step === 1) {
+        return {
+          message: { role: 'assistant', content: '', tool_calls: [toolCall('attach_image', { svg: '<svg/>' })] },
+          usage: usage(10),
+        };
+      }
+      return { message: { role: 'assistant', content: 'I can see it.' }, usage: usage(10) };
+    });
+
+    const answer = await h.session.run('look at the sprite');
+    expect(answer).toBe('I can see it.');
+    expect(h.session.history.map((m) => m.role)).toEqual(['user', 'assistant', 'tool', 'user', 'assistant']);
+    const injected = h.session.history[3]!;
+    expect(injected.content).toEqual([
+      { type: 'text', text: '[attached image: art]' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AAA' } },
+    ]);
+    // the data URL must not leak into the tool observation text
+    expect(h.session.history[2]!.content).not.toContain('data:image');
+    // the model call after the attach carries the image
+    const secondCall = h.client.calls[1]!.messages ?? [];
+    expect(secondCall.some((m) => Array.isArray(m.content))).toBe(true);
+  });
+
   it('executes tool calls, feeds results back, then answers', async () => {
     const h = makeHarness();
     let step = 0;

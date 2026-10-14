@@ -357,6 +357,17 @@ proxies allow 25 MiB for `/chat/completions`
 `persistence.enabled`, images are stored (base64) with the rest of the
 conversation and skipped silently if that exceeds the storage quota.
 
+**The agent can attach images itself.** ibh also ships an `attach_image` builtin
+tool (always available, like `page_snapshot`/`analyze`), so the user never has to
+screenshot something the site already has. When a question needs an image — art
+returned by your API, a chart URL, an element on the page — the model calls
+`attach_image` with the SVG markup, a same-origin/`data:` URL, or an element
+`selector`/`ref`; the captured image is added to the conversation and becomes
+visible to the model on the next step. It is restricted to the site origin +
+`data:` URLs and to page elements outside ibh's own UI, and the captured image is
+sent only to your configured LLM endpoint. Nothing to wire — it works in both
+proxy and BYO-key modes.
+
 ### Launcher & placeholder
 
 The closed-state launcher circle, the composer placeholder, and the

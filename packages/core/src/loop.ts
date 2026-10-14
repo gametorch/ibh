@@ -84,6 +84,24 @@ function buildIntentFromToolCall(
       if (mapping.capabilityId === 'page_snapshot') {
         return { intent: { kind: 'builtin', name: 'page_snapshot' } };
       }
+      if (mapping.capabilityId === 'attach_image') {
+        const detail =
+          obj.detail === 'auto' || obj.detail === 'low' || obj.detail === 'high' ? obj.detail : undefined;
+        return {
+          intent: {
+            kind: 'builtin',
+            name: 'attach_image',
+            args: {
+              url: typeof obj.url === 'string' ? obj.url : undefined,
+              selector: typeof obj.selector === 'string' ? obj.selector : undefined,
+              ref: typeof obj.ref === 'string' ? obj.ref : undefined,
+              svg: typeof obj.svg === 'string' ? obj.svg : undefined,
+              detail,
+              label: typeof obj.label === 'string' ? obj.label : undefined,
+            },
+          },
+        };
+      }
       if (typeof obj.code !== 'string') return { error: 'analyze requires a string "code" argument' };
       return {
         intent: { kind: 'builtin', name: 'analyze', args: { code: obj.code, data: obj.data } },
@@ -91,12 +109,27 @@ function buildIntentFromToolCall(
   }
 }
 
+/** Pull the image out of an attach_image tool payload (structural check). */
+function extractAttachedImage(payload: unknown): ImageAttachment | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const image = (payload as { image?: unknown }).image;
+  if (!image || typeof image !== 'object') return null;
+  const { url, name, mime, size, detail } = image as Record<string, unknown>;
+  if (typeof url !== 'string' || url.length === 0) return null;
+  return {
+    url,
+    name: typeof name === 'string' ? name : undefined,
+    mime: typeof mime === 'string' ? mime : undefined,
+    size: typeof size === 'number' ? size : undefined,
+    detail: detail === 'auto' || detail === 'low' || detail === 'high' ? detail : undefined,
+  };
+}
+
 /**
  * The gated agent loop:
  *   user message -> model -> tool calls -> gatekeeper (validate/policy/consent/execute/audit)
  *   -> observations -> model -> ... -> final text answer
- */
-export class AgentSession {
+ */export class AgentSession {
   history: ChatMessage[] = [];
   private running = false;
   private controller: AbortController | null = null;
@@ -173,11 +206,27 @@ export class AgentSession {
       const hasBudget = toolCalls < limits.maxToolCallsPerTurn;
       const resultPayload = await this.executeToolCall(tc, hooks, hasBudget);
       if (hasBudget) toolCalls += 1;
-      this.history.push({
-        role: 'tool',
-        tool_call_id: tc.id,
-        content: JSON.stringify(resultPayload ?? { ok: true }),
-      });
+      const mapping = this.tools.toolMap.get(tc.function.name);
+      const attached =
+        mapping?.kind === 'builtin' && mapping.capabilityId === 'attach_image'
+          ? extractAttachedImage(resultPayload)
+          : null;
+      if (attached) {
+        // The tool observation carries only the summary; the image itself is
+        // injected as a user message so the next model call can SEE it (a data
+        // URL in the tool text would just be noise to the model).
+        const { image: _image, ...observation } = resultPayload as { image?: unknown; summary?: string };
+        this.history.push(
+          { role: 'tool', tool_call_id: tc.id, content: JSON.stringify(observation) },
+          { role: 'user', content: buildUserContent(`[attached image: ${attached.name ?? 'image'}]`, [attached]) }
+        );
+      } else {
+        this.history.push({
+          role: 'tool',
+          tool_call_id: tc.id,
+          content: JSON.stringify(resultPayload ?? { ok: true }),
+        });
+      }
     }
     return toolCalls;
   }

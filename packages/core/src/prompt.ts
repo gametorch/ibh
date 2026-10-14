@@ -32,7 +32,8 @@ const EMPTY_OBJECT: JsonSchemaLite = { type: 'object', properties: {}, additiona
 /**
  * Generate OpenRouter tool definitions from the manifest. Tool names are
  * namespaced by kind so a model can never confuse a dom action with an API call.
- * Tools exist ONLY for manifest capabilities + the two read-only builtins.
+ * Tools exist ONLY for manifest capabilities + the read-only builtins
+ * (page_snapshot, analyze, attach_image).
  */
 export function buildToolDefs(policy: PolicyEngine): {
   tools: ToolDef[];
@@ -107,6 +108,22 @@ export function buildToolDefs(policy: PolicyEngine): {
     },
     { kind: 'builtin', capabilityId: 'analyze' }
   );
+  add(
+    'attach_image',
+    'Attach an image to the conversation so you can SEE it with the vision-capable model. Use this whenever the user asks about an image — including art or screenshots returned by the site API or shown on the page — instead of asking them to upload one. Provide EXACTLY ONE source: `svg` (raw SVG markup, e.g. an image field returned by the API), `url` (a same-origin or data: image URL), `selector` (CSS selector for an <img>, <svg> or <canvas> on the page), or `ref` (a page_snapshot ref). The image becomes visible to you on the next step.',
+    {
+      type: 'object',
+      properties: {
+        svg: { type: 'string', maxLength: 200000 },
+        url: { type: 'string', maxLength: 2000 },
+        selector: { type: 'string', maxLength: 500 },
+        ref: { type: 'string', pattern: '^#r[0-9]+$' },
+        detail: { type: 'string', enum: ['auto', 'low', 'high'] },
+        label: { type: 'string', maxLength: 200 },
+      },
+    },
+    { kind: 'builtin', capabilityId: 'attach_image' }
+  );
 
   return { tools, toolMap };
 }
@@ -147,6 +164,7 @@ CREDENTIALS:
 
 WORKING STYLE:
 - For data questions: call the relevant read tool(s), optionally transform with the analyze tool, then answer concisely with concrete numbers.
+- To look at an image, call attach_image yourself (svg markup from the API, a same-origin URL, or an element selector) — never ask the user to screenshot and upload an image you can fetch or capture.
 - Use page_snapshot after any navigation, and before dom_* calls when you need a fresh ref.
 - If a tool call is denied, tell the user why. Never attempt workarounds around policy.
 - Before any mutating action, make sure the user actually asked for it.${guide ? `\n\n=== SITE GUIDE (authored by the site) ===\n${guide}\n=== END SITE GUIDE ===` : ''}

@@ -453,6 +453,7 @@
 - Publishing means setting published=true: either sprites_update {published:true}, or in the editor fill the name field (editor_name_fill), save (editor_save_name), then editor_publish. The editor_* tools only exist on /sprites/:id pages.
 - The page re-renders automatically on every change (Server-Sent Events) — including changes ibh makes via the API — so no page refresh is ever needed.
 - sprites_delete exists in the manifest but is DENIED — never attempt it, even if asked.
+- To SEE a sprite's art, call attach_image yourself: pass the sprite's \`svg\` (from sprites_get) as the \`svg\` argument (or a selector for its rendered <svg>). Never ask the user to screenshot an image you can fetch or capture.
 - Credits are shown next to the user's name; generation does not cost credits in this demo.`;
 
   const KEY_STORE = 'ibh-demo-openrouter-key';

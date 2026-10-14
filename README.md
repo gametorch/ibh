@@ -6,7 +6,8 @@ their existing credentials, operating your page's DOM, and navigating your site 
 through a capability manifest **you** author and the runtime **enforces**.
 Speech-to-text (OpenRouter STT models) is supported out of the box — hold the mic,
 talk, and the transcript is sent or filled in. Images are supported too: attach,
-paste or drag a screenshot/photo into the panel and ask the model to analyze it.
+paste or drag a screenshot/photo into the panel, or let the agent pull one from
+your API or the page itself with its built-in `attach_image` tool.
 
 **Already in production:**
 - [GAMETORCH](https://gametorch.app) — game-asset studio: the agent creates, generates and publishes sprites

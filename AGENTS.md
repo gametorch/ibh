@@ -49,7 +49,10 @@ Image input is built in too (on by default; `ui.images: false` removes it): an
 attach button plus paste/drag & drop send images to the model in the multimodal
 chat-completions shape. Nothing extra to wire on the proxy — the images ride in
 the `/chat/completions` body, so just size the chat body cap for them (the
-reference proxies allow 25 MiB) and pick a vision-capable model.
+reference proxies allow 25 MiB) and pick a vision-capable model. The agent can
+also attach images itself via the built-in `attach_image` tool (raw SVG markup,
+a same-origin/`data:` URL, or a page `selector`/`ref`), so users never have to
+screenshot art their site already has.
 
 ### 2. The capability manifest (required — fail-closed)
 

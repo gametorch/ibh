@@ -8,3 +8,4 @@ export * from './adapters/fetch';
 export * from './adapters/dom';
 export * from './adapters/nav';
 export * from './adapters/analyze';
+export * from './adapters/image';

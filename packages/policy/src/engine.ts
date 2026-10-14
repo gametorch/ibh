@@ -37,12 +37,13 @@ export const LIBRARY_CEILINGS = {
   maxMutatingActionsPerSession: 200,
 } as const;
 
-export const BUILTIN_IDS = ['analyze', 'page_snapshot'] as const;
+export const BUILTIN_IDS = ['analyze', 'page_snapshot', 'attach_image'] as const;
 export type BuiltinId = (typeof BUILTIN_IDS)[number];
 
 const BUILTIN_RATES: Record<BuiltinId, RatePolicy> = {
   analyze: { maxPerSession: 50, minIntervalMs: 200 },
   page_snapshot: { maxPerSession: 100, minIntervalMs: 100 },
+  attach_image: { maxPerSession: 40, minIntervalMs: 400 },
 };
 
 class RateLimiter {
