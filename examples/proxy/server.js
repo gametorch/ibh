@@ -65,7 +65,12 @@ const ALLOWED_ORIGINS = new Set(
 );
 
 const FORWARDED_PATHS = new Set(['/api/v1/chat/completions', '/api/v1/audio/transcriptions']);
-const MAX_BODY_BYTES = 8 * 1024 * 1024;
+// Chat carries multimodal messages: images are base64 data URLs (~1.37x their
+// raw size), so the chat cap is generous; STT stays smaller (audio is compact).
+const BODY_CAPS = {
+  '/api/v1/chat/completions': 25 * 1024 * 1024,
+  '/api/v1/audio/transcriptions': 8 * 1024 * 1024,
+};
 
 /**
  * Session check. Runs BEFORE any forwarding; returning null rejects with 403.
@@ -122,13 +127,13 @@ function rateOk(ip) {
   return true;
 }
 
-function readBody(req) {
+function readBody(req, maxBytes) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
     req.on('data', (c) => {
       size += c.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         reject(new Error('payload too large'));
         req.destroy();
         return;
@@ -208,7 +213,7 @@ http
         return;
       }
 
-      const body = await readBody(req);
+      const body = await readBody(req, BODY_CAPS[path] ?? 8 * 1024 * 1024);
       if (ALLOWED_MODELS.size > 0) {
         try {
           const parsed = JSON.parse(body.toString('utf8') || '{}');

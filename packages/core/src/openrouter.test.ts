@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { OpenRouterClient, OpenRouterError, type ToolDef } from './openrouter';
+import {
+  OpenRouterClient,
+  OpenRouterError,
+  buildUserContent,
+  splitContent,
+  type ToolDef,
+} from './openrouter';
 
 function jsonResponse(payload: unknown, status = 200) {
   return { ok: status < 400, status, json: async () => payload };
@@ -154,5 +160,65 @@ describe('OpenRouterClient', () => {
 
   it('is an Error subclass', () => {
     expect(new OpenRouterError('x')).toBeInstanceOf(Error);
+  });
+});
+
+describe('multimodal content', () => {
+  it('buildUserContent keeps plain text as a string when there are no images', () => {
+    expect(buildUserContent('hi')).toBe('hi');
+    expect(buildUserContent('hi', [])).toBe('hi');
+  });
+
+  it('buildUserContent builds the multimodal parts array with images', () => {
+    expect(buildUserContent('look', [{ url: 'data:image/png;base64,AAA' }])).toEqual([
+      { type: 'text', text: 'look' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AAA' } },
+    ]);
+  });
+
+  it('buildUserContent omits the text part when the text is empty', () => {
+    expect(buildUserContent('   ', [{ url: 'u' }])).toEqual([{ type: 'image_url', image_url: { url: 'u' } }]);
+  });
+
+  it('splitContent extracts text and image urls', () => {
+    expect(splitContent('hi')).toEqual({ text: 'hi', images: [] });
+    expect(
+      splitContent([
+        { type: 'text', text: 'a' },
+        { type: 'image_url', image_url: { url: 'x' } },
+        { type: 'image_url', image_url: { url: 'y' } },
+      ])
+    ).toEqual({ text: 'a', images: ['x', 'y'] });
+    expect(splitContent(null)).toEqual({ text: '', images: [] });
+  });
+
+  it('sends multimodal messages through unchanged', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ choices: [{ message: { role: 'assistant', content: 'ok' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+    const messages = [
+      { role: 'user' as const, content: buildUserContent('describe', [{ url: 'data:image/png;base64,AAA' }]) },
+    ];
+    await new OpenRouterClient({ apiKey: 'k' }).chat({ model: 'm', messages, tools: TOOLS });
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages).toEqual(messages);
+  });
+
+  it('estimates image tokens without treating a data URL as thousands of tokens', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ choices: [{ message: { role: 'assistant', content: 'abcd' } }] }))
+    );
+    const messages = [
+      {
+        role: 'user' as const,
+        content: buildUserContent('x', [{ url: `data:image/png;base64,${'A'.repeat(10_000)}` }]),
+      },
+    ];
+    const res = await new OpenRouterClient({ apiKey: 'k' }).chat({ model: 'm', messages, tools: TOOLS });
+    // text 'x' (1) + one image (~1000) => well under the ~2500 a raw data URL would imply
+    expect(res.usage.prompt_tokens).toBeGreaterThan(900);
+    expect(res.usage.prompt_tokens).toBeLessThan(1100);
   });
 });

@@ -228,8 +228,8 @@ describe('opt-in persistence', () => {
 
     const inst = init(makeConfig({ manifest: confirmManifest(), persistence: { enabled: true } }));
     expect(inst.session.displayHistory()).toEqual([
-      { role: 'user', text: 'earlier question' },
-      { role: 'assistant', text: 'earlier answer' },
+      { role: 'user', text: 'earlier question', images: [] },
+      { role: 'assistant', text: 'earlier answer', images: [] },
     ]);
     expect(inst.audit().some((e) => e.summary === 'restored')).toBe(true);
 
@@ -254,6 +254,28 @@ describe('opt-in persistence', () => {
     const inst = init(makeConfig({ manifest: confirmManifest() }));
     await inst.send('hi');
     expect(localStorage.getItem('ibh:session')).toBeNull();
+    inst.destroy();
+  });
+
+  it('send() forwards attached images as multimodal content (BYO key mode)', async () => {
+    const calls: RequestInit[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, requestInit?: RequestInit) => {
+        calls.push(requestInit ?? {});
+        return jsonResponse({
+          choices: [{ message: { role: 'assistant', content: 'a cat' } }],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        });
+      })
+    );
+    const inst = init(makeConfig());
+    await inst.send('what is this?', { images: [{ url: 'data:image/png;base64,AAA' }] });
+    const body = JSON.parse(calls[0]!.body as string);
+    expect(body.messages.at(-1).content).toEqual([
+      { type: 'text', text: 'what is this?' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AAA' } },
+    ]);
     inst.destroy();
   });
 });

@@ -6,6 +6,8 @@ True e2e tests: each reference proxy is started as a **real process**, receives
 comes back — covering every route ibh uses:
 
 - `chat/completions` — plain completion round trip
+- `chat/completions` with a multimodal (image) user message — proves the
+  base64 image body passes through every proxy intact
 - `chat/completions` with tool definitions + forced tool choice (the agent-loop shape)
 - server-side model allowlist covers **both** chat and STT models (set
   `ALLOWED_MODELS` to include your STT model, e.g. `elevenlabs/scribe-v2`)

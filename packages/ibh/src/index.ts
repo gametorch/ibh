@@ -1,14 +1,15 @@
 import type { IbhManifest } from '@ibh/policy';
 import { PolicyEngine, validateManifest } from '@ibh/policy';
-import type { AgentHooks } from '@ibh/core';
+import type { AgentHooks, ImageAttachment } from '@ibh/core';
 import { AgentSession, OpenRouterClient } from '@ibh/core';
 import type { AuditEntry, ConsentRequest, ToolOutcome, AuthAdapter, DomExecutor } from '@ibh/executor';
 import { AnalyzeAdapter, AuditLedger, DomAdapter, FetchAdapter, Gatekeeper, NavAdapter } from '@ibh/executor';
-import type { IbhUiController, IbhUiHandle, UiTheme } from '@ibh/ui';
+import type { IbhUiController, IbhUiHandle, IbhHistoryMessage, UiTheme } from '@ibh/ui';
 import { mountIbhUi } from '@ibh/ui';
 import { createSessionPersistence } from './persistence';
 
 export type { IbhManifest, AuthAdapter, AuditEntry, ConsentRequest, ToolOutcome, AgentSession, IbhUiHandle, UiTheme };
+export type { ImageAttachment, ContentPart, MessageContent, ChatMessage } from '@ibh/core';
 
 export const VERSION = '0.1.0';
 
@@ -66,6 +67,20 @@ export interface IbhConfig {
       language?: string;
       autoSend?: boolean;
     };
+    /**
+     * Image input for multimodal analysis. Enabled by default: an attach button
+     * in the composer (file picker, paste, drag & drop). Set `false` to remove it.
+     * The configured model must support image input, and your proxy must accept
+     * the (base64-inflated) request body.
+     */
+    images?:
+      | false
+      | {
+          enabled?: boolean;
+          maxCount?: number;
+          maxBytes?: number;
+          accept?: string;
+        };
     /** CSS custom properties / inline styles for the panel host — the stable theming surface. */
     style?: Record<string, string>;
     /** Raw CSS appended to the panel's shadow root — advanced escape hatch. */
@@ -132,9 +147,15 @@ function validateCredentials(config: IbhConfig): void {
   }
 }
 
+/** Options for `IbhInstance.send`. */
+export interface SendOptions {
+  /** Images to send alongside the message for the model to analyze. */
+  images?: readonly ImageAttachment[];
+}
+
 export interface IbhInstance {
   /** Send a user message to the agent. Resolves with the final assistant text. */
-  send(text: string): Promise<string>;
+  send(text: string, opts?: SendOptions): Promise<string>;
   open(): void;
   close(): void;
   isOpen(): boolean;
@@ -180,19 +201,19 @@ class ControllerBridge implements IbhUiController {
   getSiteName(): string {
     return this.siteName;
   }
-  send(text: string): void {
-    void this.sendInternal(text);
+  send(text: string, images?: readonly ImageAttachment[]): void {
+    void this.sendInternal(text, images);
   }
-  private async sendInternal(text: string): Promise<void> {
+  private async sendInternal(text: string, images?: readonly ImageAttachment[]): Promise<void> {
     if (this.running) return;
     this.setRunning(true);
     try {
-      await this.sessionRun(text);
+      await this.sessionRun(text, images);
     } finally {
       this.setRunning(false);
     }
   }
-  sessionRun: (text: string) => Promise<string> = () => Promise.resolve('');
+  sessionRun: (text: string, images?: readonly ImageAttachment[]) => Promise<string> = () => Promise.resolve('');
   stop(): void {
     this.sessionStop();
   }
@@ -233,8 +254,8 @@ class ControllerBridge implements IbhUiController {
   }
 
   /** Set by init(): returns the displayable conversation history for panel restore. */
-  historyProvider: () => Array<{ role: 'user' | 'assistant'; text: string }> = () => [];
-  getHistory(): Array<{ role: 'user' | 'assistant'; text: string }> {
+  historyProvider: () => IbhHistoryMessage[] = () => [];
+  getHistory(): IbhHistoryMessage[] {
     return this.historyProvider();
   }
 }
@@ -320,8 +341,8 @@ export function init(config: IbhConfig): IbhInstance {
   }
 
   bridge.historyProvider = () => session.displayHistory();
-  bridge.sessionRun = async (text) => {
-    const result = await session.run(text);
+  bridge.sessionRun = async (text, images) => {
+    const result = await session.run(text, images);
     persistNow();
     return result;
   };
@@ -346,13 +367,14 @@ export function init(config: IbhConfig): IbhInstance {
       style: config.ui?.style,
       css: config.ui?.css,
       defaultPosition: config.ui?.defaultPosition,
+      images: config.ui?.images,
       stt: config.ui?.stt ? { ...config.ui.stt, apiKey: config.ui.stt.apiKey ?? config.llm.openRouterKey } : undefined,
     });
     uiRef.current = ui;
   }
 
   const instance: IbhInstance = {
-    send: (text) => session.run(text),
+    send: (text, opts) => session.run(text, opts?.images),
     open: () => ui?.open(),
     close: () => ui?.close(),
     isOpen: () => ui?.isOpen() ?? false,

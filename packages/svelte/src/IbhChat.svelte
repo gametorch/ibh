@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ibhChat } from './action';
   import type { IbhChatProps, UiTheme } from './types';
-  import type { IbhInstance } from '@gametorch/ibh';
+  import type { IbhInstance, SendOptions } from '@gametorch/ibh';
 
   let {
     manifest,
@@ -21,8 +21,8 @@
   }
 
   // Component exports: available on the mount return value / via bind:this.
-  export function send(text: string): void {
-    current?.send(text);
+  export function send(text: string, opts?: SendOptions): void {
+    void current?.send(text, opts);
   }
   export function open(): void {
     current?.open();

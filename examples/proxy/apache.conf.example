@@ -62,7 +62,8 @@ SSLProxyCACertificateFile /etc/ssl/certs/ca-certificates.crt
         # AuthBasicProvider fcgi://127.0.0.1:9000
         # Require valid-user
 
-        LimitRequestBody 1048576
+        # multimodal: images are base64 data URLs (~1.37x raw size)
+        LimitRequestBody 26214400
 
         ProxyPass https://openrouter.ai/api/v1/chat/completions
         ProxyPreserveHost Off

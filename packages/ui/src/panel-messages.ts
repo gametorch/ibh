@@ -4,7 +4,7 @@ import { el } from './el';
 export interface ChatSurface {
   scroll(): void;
   removeEmpty(): void;
-  addMessage(text: string, cls: string): HTMLElement;
+  addMessage(text: string, cls: string, images?: readonly string[]): HTMLElement;
   addChip(text: string): HTMLElement;
   addNotice(text: string): HTMLElement;
   /** Transient status line; managed by the tool flow. */
@@ -31,14 +31,29 @@ export function createChatSurface(deps: { chatView: HTMLElement; empty: HTMLElem
   return {
     scroll,
     removeEmpty,
-    addMessage(text: string, cls: string): HTMLElement {
-      removeEmpty();
-      const m = el('div', `msg ${cls}`);
-      m.textContent = text;
-      chatView.append(m);
-      scroll();
-      return m;
-    },
+    addMessage(text: string, cls: string, images?: readonly string[]): HTMLElement {
+    removeEmpty();
+    const m = el('div', `msg ${cls}`);
+    if (images && images.length > 0) {
+      const strip = el('div', 'msg-images');
+      for (const url of images) {
+        const img = el('img', 'msg-img');
+        img.src = url;
+        img.alt = 'attached image';
+        img.loading = 'lazy';
+        strip.append(img);
+      }
+      m.append(strip);
+    }
+    if (text.trim().length > 0 || !images || images.length === 0) {
+      const t = el('div', 'msg-text');
+      t.textContent = text;
+      m.append(t);
+    }
+    chatView.append(m);
+    scroll();
+    return m;
+  },
     addChip(text: string): HTMLElement {
       removeEmpty();
       const c = el('div', 'tool-chip');

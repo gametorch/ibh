@@ -34,7 +34,9 @@
 // the suffix to OpenRouter's /api/v1/*.
 const MOUNT_PATH_DEFAULT = '/api/ibh-llm';
 const FORWARDED_PATHS = {
-  '/chat/completions': 1 * 1024 * 1024, // 1 MB
+  // Chat carries multimodal messages: images are base64 data URLs (~1.37x raw
+  // size), so the chat cap is generous; STT audio is compact and stays smaller.
+  '/chat/completions': 25 * 1024 * 1024, // 25 MB
   '/audio/transcriptions': 8 * 1024 * 1024, // 8 MB
 };
 

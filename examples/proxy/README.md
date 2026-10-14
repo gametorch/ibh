@@ -40,7 +40,9 @@ The proxy forwards exactly two paths — `{llm.baseUrl}/chat/completions` and
 - **Model allowlist** (`ALLOWED_MODELS`) server-side. The client-side manifest is
   advisory; this is the gate.
 - **Per-IP rate limiting** (naive token bucket — swap in whatever your stack has).
-- **Request size cap**.
+- **Request size cap** — 25 MiB for chat, 8 MiB for STT. Chat is generous because
+  multimodal messages carry images as base64 data URLs (~1.37× their raw size);
+  raise it if your users attach several large images.
 
 It also surfaces OpenRouter's **real per-request cost** so you can meter and
 charge your users — see [2g](#2g-metering--charging-your-users--business-logic-proxies-only).
@@ -231,7 +233,7 @@ code: [`rocket/`](./rocket/) is a complete Rocket server (single crate, exact
 pinned dependencies, `cargo audit` discipline). Unlike nginx/Apache it **can**
 enforce the model allowlist server-side (`ALLOWED_MODELS`), it **builds fresh
 requests** to OpenRouter so session cookies never leak upstream, body size caps
-(1 MiB chat / 8 MiB STT) are enforced in-process, and it **refuses to start**
+(25 MiB chat / 8 MiB STT) are enforced in-process, and it **refuses to start**
 without a session verifier configured (`AUTH_VERIFY_URL`, fail-closed). See its
 [README](./rocket/README.md) for setup, env vars, recommendations (one
 hardcoded model + spend cap) and caveats (no built-in rate limiting — use

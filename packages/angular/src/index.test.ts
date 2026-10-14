@@ -99,7 +99,7 @@ describe('IbhChat (Angular directive)', () => {
     // the live instance keeps running with the mount-time config
     const inst = initMock.mock.results[0]!.value;
     d.send('still alive');
-    expect(inst.send).toHaveBeenCalledWith('still alive');
+    expect(inst.send).toHaveBeenCalledWith('still alive', undefined);
   });
 
   it('forwards the handle to the live instance', () => {
@@ -112,7 +112,7 @@ describe('IbhChat (Angular directive)', () => {
     d.open();
     d.close();
     d.setTheme('light');
-    expect(inst.send).toHaveBeenCalledWith('hello');
+    expect(inst.send).toHaveBeenCalledWith('hello', undefined);
     expect(inst.open).toHaveBeenCalledTimes(1);
     expect(inst.close).toHaveBeenCalledTimes(1);
     expect(inst.setTheme).toHaveBeenCalledWith('light');

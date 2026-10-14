@@ -1,10 +1,10 @@
-import type { IbhConfig, IbhInstance, AuditEntry, UiTheme } from '@gametorch/ibh';
+import type { IbhConfig, IbhInstance, AuditEntry, SendOptions, UiTheme } from '@gametorch/ibh';
 
-export type { IbhConfig, IbhInstance, IbhManifest, AuditEntry, UiTheme, AuthAdapter } from '@gametorch/ibh';
+export type { IbhConfig, IbhInstance, IbhManifest, AuditEntry, UiTheme, AuthAdapter, SendOptions, ImageAttachment } from '@gametorch/ibh';
 
 /** Imperative handle for controlling the ibh instance. */
 export interface IbhChatHandle {
-  send(text: string): void;
+  send(text: string, opts?: SendOptions): void;
   open(): void;
   close(): void;
   setTheme(theme: UiTheme): void;

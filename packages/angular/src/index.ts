@@ -1,12 +1,12 @@
 import { Directive, EventEmitter, Input, Output } from '@angular/core';
 import { init } from '@gametorch/ibh';
-import type { AuditEntry, IbhConfig, IbhInstance, UiTheme } from '@gametorch/ibh';
+import type { AuditEntry, IbhConfig, IbhInstance, SendOptions, UiTheme } from '@gametorch/ibh';
 
-export type { IbhConfig, IbhInstance, IbhManifest, AuditEntry, UiTheme, AuthAdapter } from '@gametorch/ibh';
+export type { IbhConfig, IbhInstance, IbhManifest, AuditEntry, UiTheme, AuthAdapter, SendOptions, ImageAttachment } from '@gametorch/ibh';
 
 /** Imperative handle for controlling the ibh instance from outside the directive. */
 export interface IbhChatHandle {
-  send(text: string): void;
+  send(text: string, opts?: SendOptions): void;
   open(): void;
   close(): void;
   setTheme(theme: UiTheme): void;
@@ -68,8 +68,8 @@ export class IbhChat implements IbhChatHandle {
     return this;
   }
 
-  send(text: string): void {
-    this.instanceHandle?.send(text);
+  send(text: string, opts?: SendOptions): void {
+    void this.instanceHandle?.send(text, opts);
   }
 
   open(): void {

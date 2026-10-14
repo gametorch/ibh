@@ -97,6 +97,29 @@ describe('ibh cloudflare worker proxy', () => {
     expect(upstreamCalls[0].init.headers.Authorization).toBe('Bearer sk-or-test');
   });
 
+  it('forwards multimodal (image) chat bodies intact', async () => {
+    const token = await signJwt({ sub: 'u1', exp: Math.floor(Date.now() / 1000) + 600 }, 'test-secret');
+    const body = JSON.stringify({
+      model: 'openai/gpt-6-luna',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'what is this?' },
+            { type: 'image_url', image_url: { url: 'data:image/png;base64,AAA' } },
+          ],
+        },
+      ],
+    });
+    const res = await worker.fetch(makeRequest('/api/ibh-llm/chat/completions', { token, body }), makeEnv());
+    expect(res.status).toBe(200);
+    const forwarded = JSON.parse(new TextDecoder().decode(upstreamCalls[0].init.body));
+    expect(forwarded.messages[0].content).toEqual([
+      { type: 'text', text: 'what is this?' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AAA' } },
+    ]);
+  });
+
   it('enforces the server-side model allowlist', async () => {
     const token = await signJwt({ sub: 'u1', exp: Math.floor(Date.now() / 1000) + 600 }, 'test-secret');
     const res = await worker.fetch(

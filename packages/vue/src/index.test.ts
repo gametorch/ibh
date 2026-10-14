@@ -125,7 +125,7 @@ describe('IbhChat (Vue)', () => {
     m.child.value?.open();
     m.child.value?.close();
     m.child.value?.setTheme('light');
-    expect(inst.send).toHaveBeenCalledWith('hello');
+    expect(inst.send).toHaveBeenCalledWith('hello', undefined);
     expect(inst.open).toHaveBeenCalledTimes(1);
     expect(inst.close).toHaveBeenCalledTimes(1);
     expect(inst.setTheme).toHaveBeenCalledWith('light');

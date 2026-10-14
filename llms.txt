@@ -6,7 +6,8 @@
 > explicit capability manifest the site authors and the runtime enforces
 > (validation → consent tiers → rate limits → budgets → execution → audit log).
 > Framework components for React, Vue, Angular, Svelte and Solid ship as npm
-> packages, with voice input (speech-to-text via OpenRouter STT models) built
+> packages, with voice input (speech-to-text via OpenRouter STT models) and image
+> input (attach/paste/drag & drop images for the model to analyze) built
 > in; LLM calls run through a thin proxy on the integrator's backend so no key
 > ever ships to the browser.
 
@@ -23,7 +24,9 @@
 Integrators run two proxy routes on their backend (`{llm.baseUrl}/chat/completions`
 and `/audio/transcriptions`): authenticate with the existing session, enforce the
 model allowlist server-side, forward to OpenRouter with the server-side key, strip
-user cookies. The node and Rocket references also surface OpenRouter's real
+user cookies. The chat route must accept multimodal bodies (images ride inline as
+base64 data URLs; the references allow 25 MiB). The node and Rocket references also
+surface OpenRouter's real
 per-request cost (`usage.cost`) to the integrator — an `ibh.usage {...}` log line
 attributed to the session user plus `X-Ibh-*` response headers — so an integrator
 can meter what each user spends and charge them however they like. That is a

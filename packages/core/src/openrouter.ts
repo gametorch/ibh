@@ -16,11 +16,68 @@ export interface ToolCall {
   function: { name: string; arguments: string };
 }
 
+/** A text part of a multimodal message (OpenAI/OpenRouter content-parts shape). */
+export interface TextContentPart {
+  type: 'text';
+  text: string;
+}
+
+/** An image part. `url` is a `data:` URL (base64) or an `https:` URL. */
+export interface ImageContentPart {
+  type: 'image_url';
+  image_url: { url: string; detail?: 'auto' | 'low' | 'high' };
+}
+
+export type ContentPart = TextContentPart | ImageContentPart;
+
+/** A message's content: plain text, or multimodal content parts. */
+export type MessageContent = string | ContentPart[] | null;
+
+/** An image the user attached to a message. */
+export interface ImageAttachment {
+  /** `data:` URL (base64) or an `https:` URL the model can fetch. */
+  url: string;
+  /** Optional label (e.g. filename), shown in the panel. */
+  name?: string;
+  /** Optional MIME type, e.g. `image/png`. */
+  mime?: string;
+  /** Optional size in bytes. */
+  size?: number;
+}
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | null;
+  content: MessageContent;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
+}
+
+/**
+ * Build the content for a user message from text + attached images. With no
+ * images the content stays a plain string (unchanged behavior); with images it
+ * becomes the multimodal parts array OpenRouter expects.
+ */
+export function buildUserContent(text: string, images: readonly ImageAttachment[] = []): MessageContent {
+  if (images.length === 0) return text;
+  const parts: ContentPart[] = [];
+  if (text.trim().length > 0) parts.push({ type: 'text', text });
+  for (const image of images) {
+    parts.push({ type: 'image_url', image_url: { url: image.url } });
+  }
+  return parts;
+}
+
+/** Split message content into displayable text and image URLs (for the panel). */
+export function splitContent(content: MessageContent): { text: string; images: string[] } {
+  if (typeof content === 'string') return { text: content, images: [] };
+  if (!Array.isArray(content)) return { text: '', images: [] };
+  let text = '';
+  const images: string[] = [];
+  for (const part of content) {
+    if (part.type === 'text') text += part.text;
+    else if (part.type === 'image_url') images.push(part.image_url.url);
+  }
+  return { text, images };
 }
 
 export interface ToolDef {
@@ -153,6 +210,17 @@ export class OpenRouterClient {
 }
 
 function estimateTokens(messages: ChatMessage[]): number {
-  const chars = messages.reduce((acc, m) => acc + (m.content?.length ?? 0), 0);
+  let chars = 0;
+  for (const m of messages) {
+    if (typeof m.content === 'string') {
+      chars += m.content.length;
+    } else if (Array.isArray(m.content)) {
+      for (const part of m.content) {
+        // text is ~4 chars/token; an image is billed by tiles, not bytes —
+        // approximate at ~1000 tokens so a data URL doesn't distort the estimate.
+        chars += part.type === 'text' ? part.text.length : 4000;
+      }
+    }
+  }
   return Math.ceil(chars / 4);
 }

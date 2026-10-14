@@ -100,10 +100,13 @@ describe('IbhChat', () => {
     render(<IbhChat {...baseProps} ref={handle} />);
     const inst = initMock.mock.results[0]!.value;
     handle.current?.send('hello');
+    const image = { url: 'data:image/png;base64,AAA' };
+    handle.current?.send('with image', { images: [image] });
     handle.current?.open();
     handle.current?.close();
     handle.current?.setTheme('light');
-    expect(inst.send).toHaveBeenCalledWith('hello');
+    expect(inst.send).toHaveBeenCalledWith('hello', undefined);
+    expect(inst.send).toHaveBeenCalledWith('with image', { images: [image] });
     expect(inst.open).toHaveBeenCalledTimes(1);
     expect(inst.close).toHaveBeenCalledTimes(1);
     expect(inst.setTheme).toHaveBeenCalledWith('light');

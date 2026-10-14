@@ -71,7 +71,7 @@ the user did not mention.`,
 | `guide`         | Soft contract: prose for the agent. String or `() => string`. Truncated at 8k chars.         |
 | `auth`          | `{ mode: 'cookie' }`, `{ mode: 'token', getToken: async () => … }` or `{ mode: 'custom', applyAuth }`. |
 | `llm`           | `{ openRouterKey?, baseUrl?, headers? }`. Three modes — see "LLM access" below. Production: point `baseUrl` at your backend proxy (no key in the page); pure frontend: BYO *user* key. A shared site key in the page is refused by init. |
-| `ui`            | `{ enabled?, accent?, startOpen?, theme?, hideThemePicker?, showClearConversation?, showAuditTab?, stt?, style?, css?, defaultPosition? }`. `enabled: false` = headless (see security note). Theming & placement: see below. |
+| `ui`            | `{ enabled?, accent?, startOpen?, theme?, hideThemePicker?, showClearConversation?, showAuditTab?, stt?, images?, style?, css?, defaultPosition? }`. `enabled: false` = headless (see security note). Theming & placement: see below. |
 | `persistence`   | `{ enabled?, key? }`. Off by default — history, audit log and session approvals live in memory and a refresh starts clean. Enable to store them in localStorage (default key `ibh:session`) and resume on the next load. Budgets/rate limits are never persisted. |
 | `consent`       | `(req) => boolean \| Promise<boolean>` used only in headless mode (`ui.enabled: false`). Without it, everything above `auto` is denied (fail-closed). Supplying it opts in to executing consented actions without the panel. |
 | `nav`           | `{ customNavigate?: (url) => void }` for framework routers (e.g. Next.js App Router).       |
@@ -322,6 +322,40 @@ The header's "Audit" tab is likewise opt-in: `ui.showAuditTab: true`.
 **Privacy note:** recordings made with the mic are sent to the configured STT
 provider (OpenRouter → model vendor) for transcription. Pressing the mic is the
 user's consent to that; consider reflecting it in your site's privacy policy.
+
+### Image input (multimodal)
+
+Image input is **on by default**: the composer gains an attach button, and the
+user can also paste an image or drag & drop one onto the panel. Attached images
+are read as base64 data URLs and sent to the model in the multimodal
+chat-completions shape (`content: [{ type: 'text', … }, { type: 'image_url',
+image_url: { url } }]`), so the user can ask ibh to look at a screenshot, photo
+or chart. The configured `llm.defaultModel` must support image input (check
+`input_modalities` in the [models API](https://openrouter.ai/api/v1/models)).
+
+```js
+ui: {
+  // defaults shown; set `images: false` to remove the attach button entirely
+  images: { maxCount: 5, maxBytes: 16 * 1024 * 1024 },
+}
+```
+
+Headless/programmatic callers send images through the same path:
+
+```js
+await ibh.send('What does this chart show?', {
+  images: [{ url: 'data:image/png;base64,…' }, { url: 'https://…/photo.jpg' }],
+});
+```
+
+`url` may be a `data:` URL or an `https:` URL the model can fetch. `ui.images` is
+either `false` or `{ enabled?, maxCount?, maxBytes?, accept? }`; `maxBytes` caps
+the total raw image size (base64 inflates it ~1.37×). Because images ride in the
+request body, your proxy's chat body cap must accommodate them — the reference
+proxies allow 25 MiB for `/chat/completions`
+(see [examples/proxy/README.md](../examples/proxy/README.md)). With
+`persistence.enabled`, images are stored (base64) with the rest of the
+conversation and skipped silently if that exceeds the storage quota.
 
 ### Launcher & placeholder
 

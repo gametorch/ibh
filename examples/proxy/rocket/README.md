@@ -13,7 +13,8 @@ Browser (ibh, llm: { baseUrl: 'http://your-host:4181/api/v1' })
 
 Exactly two paths are routed — everything else 404s:
 
-- `POST /api/v1/chat/completions` (ibh's model client, 1 MiB cap)
+- `POST /api/v1/chat/completions` (ibh's model client, 25 MiB cap — generous so
+  multimodal image payloads fit)
 - `POST /api/v1/audio/transcriptions` (ibh's `ui.stt` voice input, 8 MiB cap)
 
 ## Quickstart

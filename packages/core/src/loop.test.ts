@@ -117,6 +117,29 @@ describe('AgentSession (the gated loop)', () => {
     expect(h.client.calls).toHaveLength(1);
   });
 
+  it('sends attached images as multimodal user content and restores them in displayHistory', async () => {
+    const h = makeHarness();
+    h.client.chat.mockImplementation(async (req: { messages?: ChatMessage[] }) => {
+      h.client.calls.push({ messages: req.messages, model: 'm' });
+      return { message: { role: 'assistant', content: 'a cat' }, usage: usage(10) };
+    });
+    await h.session.run('what is this?', [{ url: 'data:image/png;base64,AAA', name: 'cat.png' }]);
+
+    expect(h.session.history[0]!.content).toEqual([
+      { type: 'text', text: 'what is this?' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AAA' } },
+    ]);
+    // the model call carries the multimodal content unchanged
+    expect(h.client.calls[0]!.messages?.[1]!.content).toEqual([
+      { type: 'text', text: 'what is this?' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AAA' } },
+    ]);
+    expect(h.session.displayHistory()).toEqual([
+      { role: 'user', text: 'what is this?', images: ['data:image/png;base64,AAA'] },
+      { role: 'assistant', text: 'a cat', images: [] },
+    ]);
+  });
+
   it('executes tool calls, feeds results back, then answers', async () => {
     const h = makeHarness();
     let step = 0;
@@ -147,7 +170,7 @@ describe('AgentSession (the gated loop)', () => {
     expect(roles).toEqual(['user', 'assistant', 'tool', 'assistant']);
     const toolMsg = h.session.history[2]!;
     if (toolMsg.role !== 'tool') throw new Error('expected tool message');
-    expect(JSON.parse(toolMsg.content ?? '{}')).toEqual({ done: true });
+    expect(JSON.parse(typeof toolMsg.content === 'string' ? toolMsg.content : '{}')).toEqual({ done: true });
     // the second model call must include the tool result observation
     const secondCallMessages = h.client.calls[1]?.messages ?? [];
     expect(secondCallMessages.some((m) => m.role === 'tool')).toBe(true);
@@ -190,7 +213,7 @@ describe('AgentSession (the gated loop)', () => {
     }));
     h.client.chat.mockResolvedValueOnce({ message: { role: 'assistant', content: 'ok' }, usage: usage(10) });
     await h.session.run('x');
-    const payloads = h.session.history.filter((m) => m.role === 'tool').map((m) => JSON.parse(m.content ?? '{}'));
+    const payloads = h.session.history.filter((m) => m.role === 'tool').map((m) => JSON.parse(typeof m.content === 'string' ? m.content : '{}'));
     expect(payloads[0].error).toContain('unknown tool');
     expect(payloads[1].error).toContain('not valid JSON');
     expect(h.gate.resolved).toHaveLength(0);
@@ -217,7 +240,7 @@ describe('AgentSession (the gated loop)', () => {
       usage: usage(10),
     });
     await h.session.run('x');
-    const payloads = h.session.history.filter((m) => m.role === 'tool').map((m) => JSON.parse(m.content ?? '{}'));
+    const payloads = h.session.history.filter((m) => m.role === 'tool').map((m) => JSON.parse(typeof m.content === 'string' ? m.content : '{}'));
     expect(payloads[0].done).toBe(true);
     expect(payloads[1].error).toContain('tool call budget exhausted');
     expect(h.gate.resolved).toHaveLength(1);

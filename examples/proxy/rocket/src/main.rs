@@ -39,7 +39,9 @@ use tokio_util::io::StreamReader;
 
 const CHAT_PATH: &str = "/api/v1/chat/completions";
 const TRANSCRIPTIONS_PATH: &str = "/api/v1/audio/transcriptions";
-const CHAT_CAP: ByteUnit = ByteUnit::Mebibyte(1); // 1 MiB
+// Multimodal chat: images arrive as base64 data URLs (~1.37x raw size), so the
+// chat cap is generous. STT audio is compact and stays smaller.
+const CHAT_CAP: ByteUnit = ByteUnit::Mebibyte(25); // 25 MiB
 const TRANSCRIPTIONS_CAP: ByteUnit = ByteUnit::Mebibyte(8); // 8 MiB
 
 #[derive(Clone)]

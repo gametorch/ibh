@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import type { ToolOutcome } from '@ibh/core';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import type { ImageAttachment, ToolOutcome } from '@ibh/core';
 import { AuditLedger } from '@ibh/executor';
 import { mountIbhUi } from './panel';
 import type { IbhUiController, IbhUiOptions } from './types';
@@ -15,11 +15,13 @@ function makeController(siteName = 'TestSite') {
   };
   const ledger = new AuditLedger();
   const sent: string[] = [];
+  const sentImages: Array<readonly ImageAttachment[]> = [];
   let running = false;
   const controller: IbhUiController = {
     getSiteName: () => siteName,
-    send: (t) => {
+    send: (t, images) => {
       sent.push(t);
+      sentImages.push(images ?? []);
     },
     stop: () => {},
     isRunning: () => running,
@@ -52,6 +54,7 @@ function makeController(siteName = 'TestSite') {
     controller,
     ledger,
     sent,
+    sentImages,
     emitAssistant: (t: string) => listeners.assistant.forEach((f) => f(t)),
     emitStatus: (t: string) => listeners.status.forEach((f) => f(t)),
     emitToolStart: (i: { capabilityId: string; kind: string }) => listeners.toolStart.forEach((f) => f(i)),
@@ -274,6 +277,69 @@ describe('mountIbhUi options', () => {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(m.sent).toEqual(['list my sprites']);
     expect(m.shadow.querySelectorAll('.msg.user')).toHaveLength(1);
+  });
+
+  it('images: attach button is present by default and removed with images:false', () => {
+    const on = mount({ startOpen: true });
+    expect(on.shadow.querySelector('.composer .attach')).not.toBeNull();
+    on.handle.destroy();
+    const off = mount({ startOpen: true, images: false });
+    expect(off.shadow.querySelector('.composer .attach')).toBeNull();
+  });
+
+  it('images: a selected file previews a thumbnail and sends with the message', async () => {
+    const m = mount({ startOpen: true });
+    const fileInput = m.q<HTMLInputElement>('.composer input[type="file"]');
+    const file = new File([new Uint8Array([137, 80, 78, 71])], 'cat.png', { type: 'image/png' });
+    Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
+    fileInput.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(m.shadow.querySelector('.thumb img')).not.toBeNull());
+
+    const input = m.q<HTMLTextAreaElement>('.composer textarea');
+    input.value = 'what is this?';
+    m.q<HTMLButtonElement>('.composer .send').click();
+
+    expect(m.sent).toEqual(['what is this?']);
+    expect(m.sentImages[0]?.[0]?.name).toBe('cat.png');
+    expect(m.sentImages[0]?.[0]?.url.startsWith('data:image/png')).toBe(true);
+    expect(m.shadow.querySelector('.msg.user .msg-img')).not.toBeNull();
+    expect(m.shadow.querySelector('.thumb')).toBeNull(); // previews cleared after send
+  });
+
+  it('images: an image-only message (no text) can be sent', async () => {
+    const m = mount({ startOpen: true });
+    const fileInput = m.q<HTMLInputElement>('.composer input[type="file"]');
+    const file = new File([new Uint8Array([1, 2, 3])], 'a.png', { type: 'image/png' });
+    Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
+    fileInput.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(m.shadow.querySelector('.thumb')).not.toBeNull());
+    m.q<HTMLButtonElement>('.composer .send').click();
+    expect(m.sent).toEqual(['']);
+    expect(m.sentImages[0]).toHaveLength(1);
+  });
+
+  it('images: a non-image file is rejected with a notice', async () => {
+    const m = mount({ startOpen: true });
+    const fileInput = m.q<HTMLInputElement>('.composer input[type="file"]');
+    const file = new File(['hello'], 'notes.txt', { type: 'text/plain' });
+    Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
+    fileInput.dispatchEvent(new Event('change'));
+    await vi.waitFor(() =>
+      expect(m.shadow.querySelector('.msg.notice')?.textContent).toContain('not an image')
+    );
+  });
+
+  it('images: persisted history renders thumbnails on mount', () => {
+    const c = makeController();
+    c.controller.getHistory = () => [
+      { role: 'user', text: 'old', images: ['data:image/png;base64,AAA'] },
+      { role: 'assistant', text: 'a cat' },
+    ];
+    const handle = mountIbhUi(c.controller, { startOpen: true });
+    const host = [...document.body.querySelectorAll('div[data-ibh-ui]')].at(-1) as HTMLElement;
+    const shadow = host.shadowRoot as ShadowRoot;
+    expect(shadow.querySelector('.msg.user .msg-img')).not.toBeNull();
+    handle.destroy();
   });
 
   it('consent card: technical mode shows "ibh wants to:" + summary; approve resolves true', async () => {

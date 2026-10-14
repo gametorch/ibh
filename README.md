@@ -5,7 +5,8 @@ signed-in users a chat panel that can act *on their behalf* — calling your API
 their existing credentials, operating your page's DOM, and navigating your site —
 through a capability manifest **you** author and the runtime **enforces**.
 Speech-to-text (OpenRouter STT models) is supported out of the box — hold the mic,
-talk, and the transcript is sent or filled in.
+talk, and the transcript is sent or filled in. Images are supported too: attach,
+paste or drag a screenshot/photo into the panel and ask the model to analyze it.
 
 **Already in production:**
 - [GAMETORCH](https://gametorch.app) — game-asset studio: the agent creates, generates and publishes sprites
@@ -89,7 +90,8 @@ one that matches how you deploy):
 | Rust (Rocket) | [`examples/proxy/rocket/`](examples/proxy/rocket/README.md) | compiled binary, pinned deps, `cargo audit` discipline, surfaces per-request cost |
 
 All proxies: session-gated, model-allowlisted server-side (nginx/Apache: one
-hardcoded model + spend cap instead — documented tradeoff), size-capped, and
+hardcoded model + spend cap instead — documented tradeoff), size-capped (25 MiB
+for chat so image payloads fit, 8 MiB for STT), and
 cookie-safe (session cookies never forwarded upstream). The **node and Rocket**
 proxies also read OpenRouter's real per-request cost (`usage.cost`) and surface it
 to your business logic — an `ibh.usage {...}` line per request attributed to the

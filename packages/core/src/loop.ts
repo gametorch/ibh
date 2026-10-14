@@ -2,7 +2,8 @@ import type { IbhManifest, PolicyEngine } from '@ibh/policy';
 import type { AuditLedger, DomExecutor, Gatekeeper, ToolOutcome } from '@ibh/executor';
 import { intentKindToCapabilityKind, capabilityIdOfIntent } from '@ibh/executor';
 import type { Intent } from '@ibh/executor';
-import type { OpenRouterClient, ChatMessage, ToolCall } from './openrouter';
+import type { OpenRouterClient, ChatMessage, ToolCall, ImageAttachment } from './openrouter';
+import { buildUserContent, splitContent } from './openrouter';
 import { buildSystemPrompt, buildToolDefs, resolveGuide } from './prompt';
 import { buildPageContext } from './context';
 import type { ToolMapping } from './prompt';
@@ -122,13 +123,14 @@ export class AgentSession {
     this.history = messages.map((m) => ({ ...m }));
   }
 
-  /** User/assistant messages with text, in order — the panel renders these. */
-  displayHistory(): Array<{ role: 'user' | 'assistant'; text: string }> {
-    const out: Array<{ role: 'user' | 'assistant'; text: string }> = [];
+  /** User/assistant messages with text (and any attached image URLs), in order —
+   *  the panel renders these. */
+  displayHistory(): Array<{ role: 'user' | 'assistant'; text: string; images: string[] }> {
+    const out: Array<{ role: 'user' | 'assistant'; text: string; images: string[] }> = [];
     for (const m of this.history) {
-      if ((m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim().length > 0) {
-        out.push({ role: m.role, text: m.content });
-      }
+      if (m.role !== 'user' && m.role !== 'assistant') continue;
+      const { text, images } = splitContent(m.content);
+      if (text.trim().length > 0 || images.length > 0) out.push({ role: m.role, text, images });
     }
     return out;
   }
@@ -180,7 +182,7 @@ export class AgentSession {
     return toolCalls;
   }
 
-  async run(userText: string): Promise<string> {
+  async run(userText: string, images: readonly ImageAttachment[] = []): Promise<string> {
     if (this.running) throw new Error('ibh is already processing a message');
     this.running = true;
     this.controller = new AbortController();
@@ -189,7 +191,7 @@ export class AgentSession {
     const guide = resolveGuide(this.deps.guide);
 
     try {
-      this.history.push({ role: 'user', content: userText });
+      this.history.push({ role: 'user', content: buildUserContent(userText, images) });
       let steps = 0;
       let toolCalls = 0;
 
@@ -236,7 +238,7 @@ export class AgentSession {
         }
 
         // Final answer.
-        const text = msg.content ?? '';
+        const text = typeof msg.content === 'string' ? msg.content : splitContent(msg.content).text;
         this.history.push({ role: 'assistant', content: text });
         hooks?.onAssistant?.(text);
         return text;

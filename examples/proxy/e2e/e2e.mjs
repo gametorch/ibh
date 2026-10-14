@@ -40,6 +40,10 @@ const MODEL = 'openai/gpt-6-luna';
 const STT_MODEL = 'elevenlabs/scribe-v2';
 const DISALLOWED_MODEL = 'openai/o-billion';
 
+// 1x1 PNG — enough to prove a multimodal (image) body passes through intact.
+const TINY_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
 const KEY = process.env.E2E_OPENROUTER_KEY || process.env.OPENROUTER_KEY || '';
 const HAVE_KEY = KEY.trim().length > 0;
 const TARGET_FILTER = (process.env.E2E_TARGETS || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -203,6 +207,24 @@ async function runMatrix(name, base, { expectAllowlist403, expectNoSession403 })
   }
   record(`${name}: chat/completions round trip`, 'pass', `model replied "${String(plainContent).slice(0, 40)}"`);
   assertUsageSurface(name, plain);
+
+  const image = await call('/chat/completions', {
+    model: MODEL,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Reply with the single word: pong' },
+          { type: 'image_url', image_url: { url: TINY_PNG } },
+        ],
+      },
+    ],
+  });
+  const imageContent = image.json?.choices?.[0]?.message?.content;
+  if (image.status !== 200 || !imageContent) {
+    throw new Error(`multimodal (image) chat failed: ${image.status} ${image.text?.slice(0, 300)}`);
+  }
+  record(`${name}: multimodal (image) round trip`, 'pass', `model replied "${String(imageContent).slice(0, 40)}"`);
 
   const forced = await call('/chat/completions', {
     model: MODEL,

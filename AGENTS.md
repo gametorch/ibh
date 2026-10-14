@@ -45,6 +45,12 @@ then auto-send the transcript or fill the input. Consequence for this file's
 proxy contract below: when `ui.stt` is configured, your proxy must also expose
 `POST {llm.baseUrl}/audio/transcriptions`.
 
+Image input is built in too (on by default; `ui.images: false` removes it): an
+attach button plus paste/drag & drop send images to the model in the multimodal
+chat-completions shape. Nothing extra to wire on the proxy — the images ride in
+the `/chat/completions` body, so just size the chat body cap for them (the
+reference proxies allow 25 MiB) and pick a vision-capable model.
+
 ### 2. The capability manifest (required — fail-closed)
 
 A JSON object declaring EVERYTHING the agent may do: `api` endpoints (with HTTP

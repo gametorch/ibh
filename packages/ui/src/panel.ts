@@ -7,6 +7,7 @@ import { installGeometry } from './panel-geometry';
 import { createConsentFlow } from './panel-consent';
 import { createChatSurface } from './panel-messages';
 import { installStt } from './panel-stt';
+import { installImageInput } from './panel-images';
 
 function fmtTime(ts: number): string {
   const d = new Date(ts);
@@ -43,6 +44,9 @@ interface PanelRefs {
   sendBtn: HTMLButtonElement;
   micBtn: HTMLButtonElement | null;
   autoSendCheckbox: HTMLInputElement | null;
+  imageBtn: HTMLButtonElement | null;
+  imageInput: HTMLInputElement | null;
+  attachmentStrip: HTMLElement | null;
   resizeGrip: HTMLElement;
 }
 
@@ -131,6 +135,31 @@ function buildShell(controller: IbhUiController, opts: IbhUiOptions): PanelRefs 
   sendBtn.title = 'Send';
   composer.append(input, sendBtn);
 
+  // image input: attach button (file picker) + paste + drag & drop (default on)
+  let imageBtn: HTMLButtonElement | null = null;
+  let imageInput: HTMLInputElement | null = null;
+  let attachmentStrip: HTMLElement | null = null;
+  const images = opts.images;
+  const imagesEnabled = images !== false && images?.enabled !== false;
+  if (imagesEnabled) {
+    attachmentStrip = el('div', 'composer-attachments');
+    attachmentStrip.hidden = true;
+
+    imageBtn = el('button', 'attach');
+    imageBtn.type = 'button';
+    imageBtn.title = 'Attach images';
+    imageBtn.setAttribute('aria-label', 'Attach images');
+    imageBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m4 17 5-5 4 4 3-3 4 4"/></svg>';
+    imageInput = el('input');
+    imageInput.type = 'file';
+    imageInput.accept = (typeof images === 'object' && images.accept) || 'image/png,image/jpeg,image/webp,image/gif';
+    imageInput.multiple = true;
+    imageInput.hidden = true;
+    composer.prepend(imageBtn);
+    composer.append(imageInput);
+  }
+
   // speech-to-text: mic button + auto-send toggle (only when STT is configured)
   let micBtn: HTMLButtonElement | null = null;
   let autoSendCheckbox: HTMLInputElement | null = null;
@@ -155,7 +184,15 @@ function buildShell(controller: IbhUiController, opts: IbhUiOptions): PanelRefs 
   const resizeGrip = el('div', 'resize-grip');
   resizeGrip.setAttribute('data-ibh-ignore', '');
 
-  panel.append(header, chatView, auditView, ...composerExtras, composer, resizeGrip);
+  panel.append(
+    header,
+    chatView,
+    auditView,
+    ...composerExtras,
+    ...(attachmentStrip ? [attachmentStrip] : []),
+    composer,
+    resizeGrip
+  );
 
   const root = el('div');
   root.append(launcher, panel);
@@ -165,7 +202,7 @@ function buildShell(controller: IbhUiController, opts: IbhUiOptions): PanelRefs 
   return {
     host, shadow, launcher, panel, header, dot, tabChat, tabAudit,
     btnTheme, btnClear, btnClose, chatView, auditView, empty,
-    composer, input, sendBtn, micBtn, autoSendCheckbox, resizeGrip,
+    composer, input, sendBtn, micBtn, autoSendCheckbox, imageBtn, imageInput, attachmentStrip, resizeGrip,
   };
 }
 
@@ -175,7 +212,7 @@ function buildShell(controller: IbhUiController, opts: IbhUiOptions): PanelRefs 
  */
 export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {}): IbhUiHandle {
   const refs = buildShell(controller, opts);
-  const { host, launcher, panel, header, dot, tabChat, tabAudit, btnTheme, btnClear, btnClose, chatView, auditView, empty, input, sendBtn, micBtn, autoSendCheckbox } = refs;
+  const { host, launcher, panel, header, dot, tabChat, tabAudit, btnTheme, btnClear, btnClose, chatView, auditView, empty, input, sendBtn, micBtn, autoSendCheckbox, imageBtn, imageInput, attachmentStrip } = refs;
 
   const theme = installTheme({ host, btnTheme, initialTheme: opts.theme });
   const geometry = installGeometry({ panel, header, launcher, defaultPosition: opts.defaultPosition });
@@ -188,6 +225,19 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
     addChip,
     scroll,
   });
+
+  const imageInputHandle =
+    opts.images !== false && imageBtn && imageInput && attachmentStrip
+      ? installImageInput({
+          button: imageBtn,
+          fileInput: imageInput,
+          strip: attachmentStrip,
+          input,
+          dropTarget: panel,
+          surface,
+          options: typeof opts.images === 'object' ? opts.images : undefined,
+        })
+      : null;
 
   let view: 'chat' | 'audit' = 'chat';
   const setView = (v: 'chat' | 'audit') => {
@@ -210,15 +260,17 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
 
   const submit = () => {
     const text = input.value.trim();
-    if (text.length === 0) return;
+    const attached = imageInputHandle?.attachments() ?? [];
+    if (text.length === 0 && attached.length === 0) return;
     if (controller.isRunning()) {
       controller.stop();
       return;
     }
     input.value = '';
     input.style.height = 'auto';
-    addMessage(text, 'user');
-    controller.send(text);
+    addMessage(text, 'user', attached.map((img) => img.url));
+    controller.send(text, [...attached]);
+    imageInputHandle?.clear();
   };
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -250,6 +302,7 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
     sendBtn.textContent = busy ? '■' : '↑';
     sendBtn.title = busy ? 'Stop' : 'Send';
     input.disabled = busy;
+    if (imageBtn) imageBtn.disabled = busy;
     if (!busy) clearStatus();
   };
 
@@ -304,7 +357,7 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
   for (const e of controller.getAudit()) renderAuditEntry(e);
 
   // Restore an opted-in persisted conversation so a refresh resumes the chat.
-  for (const m of controller.getHistory()) addMessage(m.text, m.role);
+  for (const m of controller.getHistory()) addMessage(m.text, m.role, m.images);
 
     }
   };
@@ -326,6 +379,7 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
       for (const u of unsubs) u();
       theme.dispose();
       geometry.dispose();
+      imageInputHandle?.destroy();
       document.removeEventListener('keydown', onDocKey);
       consent.denyAllPending();
       host.remove();

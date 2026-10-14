@@ -15,7 +15,8 @@ Browser (ibh, llm: { baseUrl: '/api/ibh-llm' })
 
 Exactly two paths are forwarded — everything else 404s:
 
-- `POST {llm.baseUrl}/chat/completions` (ibh's model client, 1 MB cap)
+- `POST {llm.baseUrl}/chat/completions` (ibh's model client, 25 MB cap — generous
+  so multimodal image payloads fit)
 - `POST {llm.baseUrl}/audio/transcriptions` (ibh's `ui.stt` voice input, 8 MB cap)
 
 i.e. with the default `MOUNT_PATH = "/api/ibh-llm"` and ibh configured with

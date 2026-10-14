@@ -52,7 +52,8 @@ server {
     location = /api/ibh-llm/chat/completions {
         limit_req zone=ibh_llm burst=10 nodelay;   # caveat 3: per-IP, see README
         limit_except POST { deny all; }
-        client_max_body_size 1m;
+        # multimodal: images are base64 data URLs (~1.37x raw size)
+        client_max_body_size 25m;
 
         auth_request /_ibh_auth;
 

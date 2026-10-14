@@ -72,7 +72,7 @@ describe('<IbhChat /> (Svelte 5 component)', () => {
     app.open();
     app.close();
     app.setTheme('light');
-    expect(inst.send).toHaveBeenCalledWith('hello');
+    expect(inst.send).toHaveBeenCalledWith('hello', undefined);
     expect(inst.open).toHaveBeenCalledTimes(1);
     expect(inst.close).toHaveBeenCalledTimes(1);
     expect(inst.setTheme).toHaveBeenCalledWith('light');

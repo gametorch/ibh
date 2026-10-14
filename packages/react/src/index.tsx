@@ -1,12 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { init } from '@gametorch/ibh';
-import type { AuditEntry, IbhConfig, IbhInstance, UiTheme } from '@gametorch/ibh';
+import type { AuditEntry, IbhConfig, IbhInstance, SendOptions, UiTheme } from '@gametorch/ibh';
 
-export type { IbhConfig, IbhInstance, IbhManifest, AuditEntry, UiTheme, AuthAdapter } from '@gametorch/ibh';
+export type { IbhConfig, IbhInstance, IbhManifest, AuditEntry, UiTheme, AuthAdapter, SendOptions, ImageAttachment } from '@gametorch/ibh';
 
 /** Imperative handle for controlling the ibh instance from outside React. */
 export interface IbhChatHandle {
-  send(text: string): void;
+  send(text: string, opts?: SendOptions): void;
   open(): void;
   close(): void;
   setTheme(theme: UiTheme): void;
@@ -52,7 +52,7 @@ export const IbhChat = forwardRef<IbhChatHandle, IbhChatProps>(function IbhChat(
   useImperativeHandle(
     ref,
     () => ({
-      send: (text) => instanceRef.current?.send(text),
+      send: (text, opts) => void instanceRef.current?.send(text, opts),
       open: () => instanceRef.current?.open(),
       close: () => instanceRef.current?.close(),
       setTheme: (theme) => instanceRef.current?.setTheme(theme),

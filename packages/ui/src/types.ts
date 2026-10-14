@@ -1,4 +1,4 @@
-import type { AuditEntry, ConsentRequest, ToolOutcome } from '@ibh/core';
+import type { AuditEntry, ConsentRequest, ImageAttachment, ToolOutcome } from '@ibh/core';
 
 export type UiTheme = 'light' | 'dark' | 'system';
 
@@ -6,12 +6,14 @@ export type UiTheme = 'light' | 'dark' | 'system';
 export interface IbhHistoryMessage {
   role: 'user' | 'assistant';
   text: string;
+  /** Image URLs attached to the turn (data: or https:), if any. */
+  images?: string[];
 }
 
 /** The interface the ibh umbrella provides to the UI layer. Keeps ui decoupled from wiring. */
 export interface IbhUiController {
   getSiteName(): string;
-  send(text: string): void;
+  send(text: string, images?: readonly ImageAttachment[]): void;
   stop(): void;
   isRunning(): boolean;
   clearConversation(): void;
@@ -76,6 +78,25 @@ export interface IbhUiOptions {
   };
   /** Composer textarea placeholder text. */
   placeholder?: string;
+  /**
+   * Image input: an attach button in the composer (file picker, paste, drag &
+   * drop) that sends images to the model for analysis. Enabled by default; set
+   * `false` to remove it. Images are sent as base64 data URLs in the multimodal
+   * chat-completions shape, so the configured model must support image input
+   * and your proxy's request-body cap must accommodate them.
+   */
+  images?:
+    | false
+    | {
+        /** Set false to remove the attach button (same as `images: false`). */
+        enabled?: boolean;
+        /** Max number of images per message. Default 5. */
+        maxCount?: number;
+        /** Max total bytes across attached images (before base64). Default 16 MiB. */
+        maxBytes?: number;
+        /** File-picker `accept` filter. Default common image types. */
+        accept?: string;
+      };
   /** Empty-chat state: title + hint shown before the first message. */
   emptyState?: {
     title?: string;

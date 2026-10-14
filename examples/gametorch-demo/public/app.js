@@ -464,6 +464,9 @@
         showAuditTab: true,
         // …and voice input via OpenRouter STT (swap `model` to any STT model).
         stt: { model: 'elevenlabs/scribe-v2', autoSend: true },
+        // …and image input (attach / paste / drag & drop), on by default. The
+        // default model accepts images; set `images: false` to hide the button.
+        images: { maxCount: 5 },
         // …match the site's chrome: same font, near-square radii.
         style: {
           '--ibh-font': 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
