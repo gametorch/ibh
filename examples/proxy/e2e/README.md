@@ -14,6 +14,9 @@ comes back — covering every route ibh uses:
   config-only proxies cannot read the body — documented tradeoff)
 - `audio/transcriptions` — a real speech fixture (`fixtures/hello.wav`, committed)
   transcribed back, asserting the transcript contains "hello"
+- **cost surfacing** — the node and Rocket proxies must return the real
+  OpenRouter cost to the integrator (`X-Ibh-Cost` / `X-Ibh-Total-Tokens`
+  headers), asserted on both the chat and STT round trips
 - unknown path → 404
 
 When a Chromium-based browser is available, the suite additionally runs the

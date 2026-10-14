@@ -16,7 +16,11 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['packages/*/src/**/*.test.{ts,tsx}', 'examples/proxy/cloudflare/worker.test.js'],
+    include: [
+      'packages/*/src/**/*.test.{ts,tsx}',
+      'examples/proxy/cloudflare/worker.test.js',
+      'examples/proxy/usage.test.js',
+    ],
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
   },

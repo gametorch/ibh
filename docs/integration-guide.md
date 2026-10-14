@@ -175,6 +175,18 @@ The manifest's `llm.allowedModels` shapes the *agent*; your proxy should also
 enforce it server-side (`ALLOWED_MODELS` in the reference proxy), rate-limit per
 user, and cap spend (OpenRouter supports per-key spend limits as a second layer).
 
+**Metering & charging users.** OpenRouter returns the real cost of every request
+(`usage.cost`) in the response, so you can track exactly what each user spent and
+charge them however you like — pass it through, add a markup, debit credits, or
+count it against a plan. Do this in a **business-logic proxy** (the
+[node](../examples/proxy/server.js) and [Rocket](../examples/proxy/rocket/)
+references read `usage`, attribute it to the verified session user, log an
+`ibh.usage {...}` line and set `X-Ibh-*` headers; replace `recordUsage` /
+`record_usage` with a write to your billing system). It is not a front-end
+concern — the browser has no use for cost — and the config-only proxies
+(nginx/Apache) cannot read response bodies, so they can't do it. See
+[`examples/proxy/README.md`](../examples/proxy/README.md#2g-metering--charging-your-users--business-logic-proxies-only).
+
 ## 5. Annotate your DOM (optional but recommended)
 
 ```html

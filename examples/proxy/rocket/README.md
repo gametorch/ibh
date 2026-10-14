@@ -51,6 +51,24 @@ The upstream request is built from scratch — only `Authorization`,
 `Content-Type` and `X-Title` are sent. The user's session `Cookie` **never**
 reaches openrouter.ai.
 
+## Metering & charging your users
+
+OpenRouter returns the **real cost** of every request (`usage.cost`, plus
+`usage.cost_details.upstream_inference_cost`) in the response body. ibh is
+non-streaming, so this server reads it, attributes it to the verified session
+user, and surfaces it two ways:
+
+- one machine-readable line per request, `ibh.usage {...}` (user, cost, tokens,
+  model, generation id), printed from `record_usage` in `src/main.rs`; and
+- `X-Ibh-*` response headers (`X-Ibh-Cost`, `X-Ibh-Upstream-Inference-Cost`,
+  `X-Ibh-Total-Tokens`, `X-Ibh-Audio-Seconds`, `X-Ibh-Generation-Id`,
+  `X-Ibh-Model`).
+
+To bill, replace the body of `record_usage` with a write to your database /
+billing system and charge however you like (pass-through, markup, credits,
+quota). The browser never sees cost, and the config-only proxies (nginx/Apache)
+cannot read response bodies at all — this is a business-logic-proxy concern.
+
 ## Recommendations & caveats (same posture as the other variants)
 
 - **Model allowlist**: prefer the **one-hardcoded-model** approach

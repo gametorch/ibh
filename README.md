@@ -82,15 +82,23 @@ one that matches how you deploy):
 
 | Stack | What ships | Notes |
 | --- | --- | --- |
-| Node (zero deps) | [`examples/proxy/server.js`](examples/proxy/server.js) | `node server.js`; loopback bind, session-verify via `AUTH_VERIFY_URL`, streams upstream responses |
+| Node (zero deps) | [`examples/proxy/server.js`](examples/proxy/server.js) | `node server.js`; loopback bind, session-verify via `AUTH_VERIFY_URL`, surfaces OpenRouter's real per-request cost |
 | Cloudflare Workers | [`examples/proxy/cloudflare/`](examples/proxy/cloudflare/README.md) | deployable Worker + wrangler config, 8 smoke tests, full docs |
 | nginx | [`examples/proxy/nginx.conf.example`](examples/proxy/nginx.conf.example) | config-only; caveats documented |
 | Apache httpd | [`examples/proxy/apache.conf.example`](examples/proxy/apache.conf.example) | config-only; caveats documented |
-| Rust (Rocket) | [`examples/proxy/rocket/`](examples/proxy/rocket/README.md) | compiled binary, pinned deps, `cargo audit` discipline |
+| Rust (Rocket) | [`examples/proxy/rocket/`](examples/proxy/rocket/README.md) | compiled binary, pinned deps, `cargo audit` discipline, surfaces per-request cost |
 
 All proxies: session-gated, model-allowlisted server-side (nginx/Apache: one
 hardcoded model + spend cap instead — documented tradeoff), size-capped, and
-cookie-safe (session cookies never forwarded upstream). Using something else
+cookie-safe (session cookies never forwarded upstream). The **node and Rocket**
+proxies also read OpenRouter's real per-request cost (`usage.cost`) and surface it
+to your business logic — an `ibh.usage {...}` line per request attributed to the
+signed-in user, plus `X-Ibh-*` response headers — so you can meter what each user
+spends and charge them however you want. That metering belongs in the
+business-logic proxy (the browser has no use for cost, and config-only
+nginx/Apache can't read response bodies); see
+[`examples/proxy/README.md`](examples/proxy/README.md#2g-metering--charging-your-users--business-logic-proxies-only).
+Using something else
 (Express, Hono, Fastify, Laravel, Rails…)? The contract is ~40 lines —
 [`examples/proxy/README.md`](examples/proxy/README.md) documents it, and the
 [integration guide](docs/integration-guide.md) walks through the full setup.

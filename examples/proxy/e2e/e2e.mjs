@@ -160,8 +160,22 @@ function apiClient(base, cookie = 'sid=e2e-session') {
     } catch {
       /* non-JSON */
     }
-    return { status: res.status, json, text };
+    return { status: res.status, headers: Object.fromEntries(res.headers), json, text };
   };
+}
+
+/** Every business-logic proxy (node, rocket) must surface OpenRouter's REAL
+ *  per-request cost to the integrator so it can meter and bill users. */
+function assertUsageSurface(name, res) {
+  const costHeader = res.headers['x-ibh-cost'];
+  const tokensHeader = res.headers['x-ibh-total-tokens'];
+  if (costHeader === undefined || !Number.isFinite(Number(costHeader))) {
+    throw new Error(`cost not surfaced: x-ibh-cost=${costHeader}`);
+  }
+  if (tokensHeader === undefined) {
+    throw new Error('cost not surfaced: missing x-ibh-total-tokens');
+  }
+  record(`${name}: usage cost surfaced (X-Ibh-*)`, 'pass', `cost=$${Number(costHeader)} tokens=${tokensHeader}`);
 }
 
 const toolDefs = [
@@ -188,6 +202,7 @@ async function runMatrix(name, base, { expectAllowlist403, expectNoSession403 })
     throw new Error(`plain chat failed: ${plain.status} ${plain.text?.slice(0, 300)}`);
   }
   record(`${name}: chat/completions round trip`, 'pass', `model replied "${String(plainContent).slice(0, 40)}"`);
+  assertUsageSurface(name, plain);
 
   const forced = await call('/chat/completions', {
     model: MODEL,
@@ -268,6 +283,7 @@ async function runStt(name, base) {
     throw new Error(`transcription did not contain "hello": "${text.slice(0, 120)}"`);
   }
   record(`${name}: audio/transcriptions (real speech)`, 'pass', `"${text.slice(0, 60)}"`);
+  assertUsageSurface(name, res);
 }
 
 /* ------------------------------------------------------------------ */

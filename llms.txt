@@ -23,7 +23,12 @@
 Integrators run two proxy routes on their backend (`{llm.baseUrl}/chat/completions`
 and `/audio/transcriptions`): authenticate with the existing session, enforce the
 model allowlist server-side, forward to OpenRouter with the server-side key, strip
-user cookies. References to translate or deploy:
+user cookies. The node and Rocket references also surface OpenRouter's real
+per-request cost (`usage.cost`) to the integrator — an `ibh.usage {...}` log line
+attributed to the session user plus `X-Ibh-*` response headers — so an integrator
+can meter what each user spends and charge them however they like. That is a
+business-logic-proxy concern only (config-only nginx/Apache cannot read response
+bodies; the browser never needs cost). References to translate or deploy:
 
 - [Proxy overview + contract](https://github.com/gametorch/ibh/blob/main/examples/proxy/README.md): the ~40-line contract, Next.js and Cloudflare snippets
 - [Pure node server](https://github.com/gametorch/ibh/blob/main/examples/proxy/server.js): zero dependencies

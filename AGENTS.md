@@ -83,6 +83,15 @@ Your routes must:
 4. **strip the user's cookies** from the upstream request,
 5. return OpenRouter's status/body unchanged, and reject every other path (404).
 
+Because this proxy is where the session user and the key meet, it is also the
+only place to **meter and charge users**: OpenRouter returns the real cost
+(`usage.cost`) on every response, so read it, attribute it to the verified user,
+and persist it (the node/Rocket references log an `ibh.usage {...}` line and set
+`X-Ibh-*` headers; replace that one hook with a DB write). Cost is never surfaced
+in the front end, and config-only proxies (nginx/Apache) can't read response
+bodies — this is a business-logic-proxy concern. See
+[examples/proxy/README.md §2g](examples/proxy/README.md#2g-metering--charging-your-users--business-logic-proxies-only).
+
 **Reference implementations to translate** — we ship examples in pure node
 (`examples/proxy/server.js`, zero dependencies) and Rust/Rocket
 (`examples/proxy/rocket/`), but you will probably have to **translate those

@@ -42,6 +42,9 @@ The proxy forwards exactly two paths — `{llm.baseUrl}/chat/completions` and
 - **Per-IP rate limiting** (naive token bucket — swap in whatever your stack has).
 - **Request size cap**.
 
+It also surfaces OpenRouter's **real per-request cost** so you can meter and
+charge your users — see [2g](#2g-metering--charging-your-users--business-logic-proxies-only).
+
 ## 2. Other stacks (same shape, ~30 lines each)
 
 **Next.js App Router** — `app/api/ibh-llm/[...path]/route.ts`:
@@ -243,6 +246,66 @@ API**, plus a **headless-browser flow** through the real ibh UI and the demo
 site. Requires a real key (`E2E_OPENROUTER_KEY`); without one, positive tests
 skip and negative tests still run.
 
+## 2g. Metering & charging your users — business-logic proxies only
+
+OpenRouter returns the **real cost** of every request in the response body —
+`usage.cost` (USD charged to *your* key) plus
+`usage.cost_details.upstream_inference_cost` (what the upstream provider
+charged). ibh never needs to see it: cost is a per-user, server-side concern, so
+the place to capture it is your **business-logic proxy**. The
+[node](./server.js) and [Rocket](./rocket/) references do this for you — and this
+is precisely why it *cannot* be done by the config-only variants (nginx/Apache
+cannot read response bodies) or by the browser.
+
+Both references:
+
+1. read `usage` from the JSON response (ibh is non-streaming, so it is always
+   present and complete),
+2. attribute it to the session user returned by your verifier
+   (`AUTH_VERIFY_URL`'s JSON `user` field),
+3. emit one machine-readable line per request — `ibh.usage {...}` carrying
+   `user`, `cost`, token counts, model and generation id — from `recordUsage`
+   (node, [`usage.js`](./usage.js)) / `record_usage` (Rocket), and
+4. mirror the figures into `X-Ibh-*` response headers.
+
+**To bill**, replace that one function with a write to your database / billing
+system and charge however you want — pass `cost` through, add a markup, debit a
+credit balance, or count against a plan quota. The hook is deliberately tiny;
+every input you need is already in the record:
+
+```
+ibh.usage {"user":"u_123","cost":0.000508,"totalTokens":113,"model":"elevenlabs/scribe-v2","generationId":"gen-..."}
+```
+
+For example, in the node reference (`usage.js`) that hook is one function:
+
+```js
+function recordUsage(record) {
+  db.insert('ibh_usage', { ...record, at: new Date() });   // your store
+  if (record.cost > 0) bill(record.user, record.cost * 1.2); // your markup
+}
+```
+
+Response headers (each present only when OpenRouter reports that field):
+
+| Header | Meaning |
+| --- | --- |
+| `X-Ibh-Cost` | USD charged to your OpenRouter key for this request |
+| `X-Ibh-Upstream-Inference-Cost` | USD the upstream provider charged (BYOK) |
+| `X-Ibh-Total-Tokens` | total tokens (chat or STT) |
+| `X-Ibh-Audio-Seconds` | STT audio duration, in seconds |
+| `X-Ibh-Generation-Id` | OpenRouter generation id (for the `/generation` audit endpoint) |
+| `X-Ibh-Model` | model that served the request |
+
+These headers are for **your** server and observability (log aggregation, a
+gateway in front, tests); ibh itself ignores them, and you can strip them before
+the response reaches the browser if you like. Cost is deliberately **not**
+surfaced in the ibh front end — the panel has no product reason to know it.
+
+Streaming note: the references read cost from JSON bodies, which is all ibh ever
+sends. If you enable streaming for some other client, OpenRouter puts the same
+`usage` object in the final SSE chunk — parse it there.
+
 ## 3. Pure frontend: BYO user key
 
 ```js
@@ -262,3 +325,8 @@ legitimate key-in-the-page mode — and it still must never be a key *you* contr
    limits — use them as a second layer).
 4. The proxy must authenticate with your *existing* session — ibh sends cookies
    (`credentials: 'include'`) and no Authorization header in proxy mode.
+5. Meter and charge in your **business-logic proxy**: OpenRouter returns
+   `usage.cost` on every response; capture it (node/Rocket references do — see
+   [2g](#2g-metering--charging-your-users--business-logic-proxies-only)) to know
+   what each user spent and bill them however you want. The browser and the
+   config-only proxies cannot do this.
