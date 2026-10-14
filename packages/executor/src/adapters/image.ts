@@ -119,6 +119,64 @@ function dataUrlMime(url: string): string | undefined {
   return /^data:([^;,]+)/iu.exec(url)?.[1];
 }
 
+const SVG_RE = /<svg[\s>]/iu;
+
+/** Decode an `image/svg+xml` data URL back to markup (handles base64 and %-encoding). */
+function decodeSvgDataUrl(url: string): string | null {
+  const comma = url.indexOf(',');
+  if (comma < 0) return null;
+  const meta = url.slice(5, comma);
+  const data = url.slice(comma + 1);
+  try {
+    if (/;base64/iu.test(meta)) {
+      const binary = atob(data);
+      const bytes = Uint8Array.from(binary, (c) => c.codePointAt(0) ?? 0);
+      return new TextDecoder().decode(bytes);
+    }
+    return decodeURIComponent(data);
+  } catch {
+    return null;
+  }
+}
+
+/** Recursively find an SVG string inside a parsed JSON value (models sometimes wrap it). */
+function findSvgString(value: unknown, depth = 0): string | null {
+  if (depth > 4) return null;
+  if (typeof value === 'string') return SVG_RE.test(value) ? value : null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findSvgString(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (value && typeof value === 'object') {
+    for (const item of Object.values(value)) {
+      const found = findSvgString(item, depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/**
+ * Accept raw SVG markup, or a JSON string/object that contains it. Models
+ * sometimes hand back the API's JSON blob (or a quoted string) instead of the
+ * bare markup; unwrap it so a reasonable attempt still works.
+ */
+function normalizeSvg(value: string): string | null {
+  const trimmed = value.trim();
+  if (SVG_RE.test(trimmed)) return trimmed;
+  if (/^[{["]/u.test(trimmed)) {
+    try {
+      return findSvgString(JSON.parse(trimmed));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export class ImageAdapter implements ImageExecutor {
   constructor(
     private readonly opts: {
@@ -130,15 +188,14 @@ export class ImageAdapter implements ImageExecutor {
   ) {}
 
   async capture(source: ImageCaptureSource): Promise<ImageCaptureResult> {
-    const provided = [source.url, source.selector, source.ref, source.svg].filter(
-      (v) => typeof v === 'string' && v.length > 0
-    );
-    if (provided.length !== 1) {
-      return { ok: false, summary: 'attach_image needs exactly one of: url, selector, ref, svg' };
+    const has = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
+    if (!has(source.svg) && !has(source.url) && !has(source.selector) && !has(source.ref)) {
+      return { ok: false, summary: 'attach_image needs one of: svg, url, selector, ref (none provided)' };
     }
-    if (source.svg !== undefined) return await this.fromSvg(source);
-    if (source.url !== undefined) return await this.fromUrl(source);
-    return await this.fromElement(source);
+    // If the model supplies more than one, take the most specific (svg > selector > ref > url).
+    if (has(source.svg)) return await this.fromSvg(source);
+    if (has(source.selector) || has(source.ref)) return await this.fromElement(source);
+    return await this.fromUrl(source);
   }
 
   private done(source: ImageCaptureSource, url: string, name: string, mime?: string, size?: number): ImageCaptureResult {
@@ -152,7 +209,9 @@ export class ImageAdapter implements ImageExecutor {
   private async fromUrl(source: ImageCaptureSource): Promise<ImageCaptureResult> {
     const raw = source.url as string;
     if (raw.startsWith('data:')) {
-      return this.done(source, raw, source.label ?? 'inline image', dataUrlMime(raw));
+      const mime = dataUrlMime(raw);
+      if (mime?.includes('svg')) return this.fromSvgDataUrl(source, raw, source.label ?? 'inline svg');
+      return this.done(source, raw, source.label ?? 'inline image', mime);
     }
     let parsed: URL;
     try {
@@ -177,14 +236,27 @@ export class ImageAdapter implements ImageExecutor {
     if (blob.size > MAX_IMAGE_BYTES) {
       return { ok: false, summary: `attach_image: image exceeds ${MAX_IMAGE_BYTES / (1024 * 1024)} MiB` };
     }
+    const name = source.label ?? parsed.pathname.split('/').pop() ?? 'image';
+    if (blob.type.includes('svg')) {
+      const url = await rasterizeSvg(await blob.text());
+      if (!url) return { ok: false, summary: 'attach_image: could not rasterize the SVG image' };
+      return this.done(source, url, name, 'image/png');
+    }
     const url = await blobToDataUrl(blob);
-    return this.done(source, url, source.label ?? parsed.pathname.split('/').pop() ?? 'image', blob.type, blob.size);
+    return this.done(source, url, name, blob.type, blob.size);
+  }
+
+  private async fromSvgDataUrl(source: ImageCaptureSource, dataUrl: string, name: string): Promise<ImageCaptureResult> {
+    const markup = decodeSvgDataUrl(dataUrl);
+    const url = markup ? await rasterizeSvg(markup) : null;
+    if (!url) return { ok: false, summary: 'attach_image: could not rasterize the SVG image' };
+    return this.done(source, url, name, 'image/png');
   }
 
   private async fromSvg(source: ImageCaptureSource): Promise<ImageCaptureResult> {
-    const markup = source.svg as string;
+    const markup = normalizeSvg(source.svg as string);
+    if (!markup) return { ok: false, summary: 'attach_image: "svg" does not look like SVG markup' };
     if (markup.length > MAX_SVG_CHARS) return { ok: false, summary: 'attach_image: svg markup is too large' };
-    if (!/<svg[\s>]/iu.test(markup)) return { ok: false, summary: 'attach_image: "svg" does not look like SVG markup' };
     const url = await rasterizeSvg(markup);
     if (!url) return { ok: false, summary: 'attach_image: could not rasterize the SVG (no canvas support in this environment)' };
     return this.done(source, url, source.label ?? 'svg image', 'image/png');
@@ -219,7 +291,11 @@ export class ImageAdapter implements ImageExecutor {
     if (el instanceof HTMLImageElement) {
       const src = el.currentSrc || el.src;
       if (!src) return { ok: false, summary: 'attach_image: the <img> has no src' };
-      if (src.startsWith('data:')) return this.done(source, src, label, dataUrlMime(src));
+      if (src.startsWith('data:')) {
+        const mime = dataUrlMime(src);
+        if (mime?.includes('svg')) return this.fromSvgDataUrl(source, src, label);
+        return this.done(source, src, label, mime);
+      }
       const origin = (() => {
         try {
           return new URL(src, location.href).origin;

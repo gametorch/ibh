@@ -301,6 +301,17 @@ describe('mountIbhUi options', () => {
     expect(m.shadow.querySelectorAll('.msg.user')).toHaveLength(1);
   });
 
+  it('the send button stops a running turn instead of trying to send', () => {
+    const m = mount({ startOpen: true });
+    let stops = 0;
+    m.controller.stop = () => {
+      stops += 1;
+    };
+    m.setRunning(true);
+    m.q<HTMLButtonElement>('.composer .send').click();
+    expect(stops).toBe(1);
+  });
+
   it('images: attach button is present by default and removed with images:false', () => {
     const on = mount({ startOpen: true });
     expect(on.shadow.querySelector('.composer .attach')).not.toBeNull();

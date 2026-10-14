@@ -259,13 +259,13 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
   });
 
   const submit = () => {
-    const text = input.value.trim();
-    const attached = imageInputHandle?.attachments() ?? [];
-    if (text.length === 0 && attached.length === 0) return;
     if (controller.isRunning()) {
       controller.stop();
       return;
     }
+    const text = input.value.trim();
+    const attached = imageInputHandle?.attachments() ?? [];
+    if (text.length === 0 && attached.length === 0) return;
     input.value = '';
     input.style.height = 'auto';
     addMessage(text, 'user', attached.map((img) => img.url));

@@ -225,6 +225,9 @@
     const grid = el('div', 'editor-grid');
     const canvas = el('div', 'canvas', 'Loading…');
     canvas.id = 'canvas';
+    // Marks the rendered art as a page region so the agent can attach it with
+    // `attach_image { ref }` (no need to paste the SVG markup by hand).
+    canvas.setAttribute('data-ibh-region', 'sprite-art');
     const side = el('div', 'editor-side');
     const palTitle = el('h3', null, 'Palette');
     palTitle.style.marginTop = '0';
@@ -453,7 +456,7 @@
 - Publishing means setting published=true: either sprites_update {published:true}, or in the editor fill the name field (editor_name_fill), save (editor_save_name), then editor_publish. The editor_* tools only exist on /sprites/:id pages.
 - The page re-renders automatically on every change (Server-Sent Events) — including changes ibh makes via the API — so no page refresh is ever needed.
 - sprites_delete exists in the manifest but is DENIED — never attempt it, even if asked.
-- To SEE a sprite's art, call attach_image yourself: pass the sprite's \`svg\` (from sprites_get) as the \`svg\` argument (or a selector for its rendered <svg>). Never ask the user to screenshot an image you can fetch or capture.
+- To SEE a sprite's art, call attach_image yourself: on the editor page take a page_snapshot and pass the ref of the "sprite-art" region (e.g. {"ref":"#r7"}), or pass the sprite's svg string from sprites_get. Never ask the user to screenshot an image you can capture.
 - Credits are shown next to the user's name; generation does not cost credits in this demo.`;
 
   const KEY_STORE = 'ibh-demo-openrouter-key';

@@ -110,7 +110,7 @@ export function buildToolDefs(policy: PolicyEngine): {
   );
   add(
     'attach_image',
-    'Attach an image to the conversation so you can SEE it with the vision-capable model. Use this whenever the user asks about an image — including art or screenshots returned by the site API or shown on the page — instead of asking them to upload one. Provide EXACTLY ONE source: `svg` (raw SVG markup, e.g. an image field returned by the API), `url` (a same-origin or data: image URL), `selector` (CSS selector for an <img>, <svg> or <canvas> on the page), or `ref` (a page_snapshot ref). The image becomes visible to you on the next step.',
+    'Attach an image to the conversation so you can SEE it with the vision-capable model. Use this whenever the user asks about an image — including art or screenshots returned by the site API or shown on the page — instead of asking them to upload one. Provide one source, preferring `ref` (a page_snapshot ref for an image/element on the page — usually the easiest), then `selector` (CSS selector for an <img>, <svg> or <canvas>), then `svg` (raw SVG markup, e.g. an image field returned by the API), then `url` (a same-origin or data: image URL). SVG is rasterized for you. The image becomes visible to you on the next step.',
     {
       type: 'object',
       properties: {
