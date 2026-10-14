@@ -1,6 +1,6 @@
 {
   "name": "@ibh/ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ibh user interface: shadow-DOM chat panel, consent cards and audit log view.",
   "license": "MIT",
   "type": "module",

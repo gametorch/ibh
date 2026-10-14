@@ -1,6 +1,6 @@
 {
   "name": "@gametorch/ibh-angular",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Angular bindings for ibh \u2014 a drop-in <ibh-chat> in-browser agent component gated by a capability manifest.",
   "license": "MIT",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@gametorch/ibh-svelte",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Svelte 5 bindings for ibh \u2014 a drop-in <IbhChat /> component and use:ibhChat action, gated by a capability manifest.",
   "license": "MIT",
   "type": "module",

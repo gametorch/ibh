@@ -12,7 +12,7 @@ export type { IbhManifest, AuthAdapter, AuditEntry, ConsentRequest, ToolOutcome,
 export type { ImageAttachment, ContentPart, MessageContent, ChatMessage } from '@ibh/core';
 export type { MarkdownConfig, MarkdownRenderer } from '@ibh/ui';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 
 export interface IbhConfig {
   /** The hard contract. Validated fail-closed; a bad manifest means ibh refuses to start. */

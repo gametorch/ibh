@@ -1,6 +1,6 @@
 {
   "name": "@gametorch/ibh-vue",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Vue 3 bindings for ibh \u2014 a drop-in <IbhChat /> in-browser agent component gated by a capability manifest.",
   "license": "MIT",
   "type": "module",

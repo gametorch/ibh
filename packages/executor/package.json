@@ -1,6 +1,6 @@
 {
   "name": "@ibh/executor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ibh gatekeeper: intent validation, policy enforcement, consent flow, audit ledger and site adapters (fetch/dom/nav/analyze).",
   "license": "MIT",
   "type": "module",

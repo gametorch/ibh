@@ -1,6 +1,6 @@
 {
   "name": "@ibh/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ibh agent core: OpenRouter client, system prompt, page context builder and the gated agent loop.",
   "license": "MIT",
   "type": "module",
