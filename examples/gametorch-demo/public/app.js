@@ -141,6 +141,21 @@
     createBtn.type = 'submit';
     createBtn.setAttribute('data-ibh-action', 'create-sprite');
     form.append(input, createBtn);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = input.value.trim();
+      if (!name) return;
+      createBtn.disabled = true;
+      try {
+        await api.create(name);
+        input.value = '';
+        flashStatus('Created!');
+      } catch (err) {
+        flashStatus(err.message);
+      } finally {
+        createBtn.disabled = false;
+      }
+    });
     const hint = el('p', 'muted small', 'Ask ibh: “create a sprite called Ember Fox and open its editor”.');
     createPanel.append(form, hint);
 
