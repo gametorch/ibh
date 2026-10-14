@@ -119,6 +119,22 @@ describe('ImageAdapter (attach_image capture)', () => {
     expect(r.image?.url).toBe('data:image/png;base64,CANVAS');
   });
 
+  it('treats an empty selector as absent and falls back to the ref', async () => {
+    const canvas = document.createElement('canvas');
+    (canvas as unknown as { toDataURL: () => string }).toDataURL = () => 'data:image/png;base64,C';
+    const selectors: string[] = [];
+    const dom = makeDom({
+      resolve: (selector) => {
+        selectors.push(selector);
+        return { el: canvas };
+      },
+    });
+    const adapter = new ImageAdapter({ siteOrigin: ORIGIN, dom });
+    const r = await adapter.capture({ selector: '', ref: '#r1' });
+    expect(r.ok).toBe(true);
+    expect(selectors).toEqual(['*']);
+  });
+
   it('reports when the selected element has no image to capture', async () => {
     const dom = makeDom({ resolve: () => ({ el: document.createElement('div') }) });
     const adapter = new ImageAdapter({ siteOrigin: ORIGIN, dom });

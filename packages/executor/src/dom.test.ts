@@ -52,6 +52,13 @@ describe('DomAdapter.resolve', () => {
     expect(r.el).toBeNull();
     expect(r.error).toContain('out of bounds');
   });
+
+  it('returns an error (never throws) for an empty selector', () => {
+    const dom = new DomAdapter();
+    expect(() => dom.resolve('')).not.toThrow();
+    expect(dom.resolve('').el).toBeNull();
+    expect(dom.resolve('').error).toContain('empty');
+  });
 });
 
 describe('DomAdapter snapshot refs', () => {

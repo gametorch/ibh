@@ -103,6 +103,9 @@ export class DomAdapter implements DomExecutor {
   }
 
   resolve(selector: string, ref?: string): { el: Element | null; error?: string } {
+    if (typeof selector !== 'string' || selector.trim().length === 0) {
+      return { el: null, error: 'selector is empty' };
+    }
     if (ref !== undefined) {
       const wr = this.refs.get(ref);
       const el = wr?.deref();

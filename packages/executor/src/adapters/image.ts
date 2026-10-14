@@ -263,7 +263,9 @@ export class ImageAdapter implements ImageExecutor {
   }
 
   private async fromElement(source: ImageCaptureSource): Promise<ImageCaptureResult> {
-    const selector = source.selector ?? (source.ref ? '*' : '');
+    // An empty selector (models sometimes send `selector: ""` with a ref) must
+    // fall back to the ref, not reach `element.matches('')`.
+    const selector = typeof source.selector === 'string' && source.selector.trim().length > 0 ? source.selector : '*';
     const { el, error } = this.opts.dom.resolve(selector, source.ref);
     if (!el) return { ok: false, summary: `attach_image: ${error ?? 'element not found'}` };
     const target = this.pickImageElement(el);
