@@ -91,6 +91,20 @@ describe('OpenRouterClient', () => {
     expect((init as RequestInit).credentials).toBe('include');
   });
 
+  it('omits credentials in BYO-key mode (cross-origin to openrouter.ai)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ choices: [{ message: { role: 'assistant', content: 'x' } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new OpenRouterClient({ apiKey: 'sk-user' }).chat({ model: 'm', messages: MESSAGES, tools: TOOLS });
+    const [, init] = fetchMock.mock.calls[0]!;
+    // openrouter.ai answers `Access-Control-Allow-Origin: *`; a credentialed
+    // cross-origin request would be blocked by the browser ("Failed to fetch").
+    expect((init as RequestInit).credentials).toBe('omit');
+    expect((init as RequestInit).headers as Record<string, string>).toMatchObject({ Authorization: 'Bearer sk-user' });
+  });
+
   it('applies integrator-supplied extra headers (e.g. proxy gateway auth)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({ choices: [{ message: { role: 'assistant', content: 'x' } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } })

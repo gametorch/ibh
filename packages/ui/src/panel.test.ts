@@ -75,6 +75,27 @@ function mount(opts: IbhUiOptions = {}, siteName?: string) {
   return { ...c, handle, host, shadow, q };
 }
 
+/** Minimal MediaRecorder + getUserMedia stubs so the STT flow can run in jsdom. */
+function stubRecorder() {
+  class FakeMediaRecorder {
+    static current: FakeMediaRecorder | null = null;
+    ondataavailable: ((e: { data: Blob }) => void) | null = null;
+    onstop: (() => void) | null = null;
+    mimeType = 'audio/webm';
+    constructor() {
+      FakeMediaRecorder.current = this;
+    }
+    start(): void {}
+    stop(): void {}
+  }
+  (globalThis as unknown as { MediaRecorder: unknown }).MediaRecorder = FakeMediaRecorder;
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => {} }] }) },
+  });
+  return { recorder: (): FakeMediaRecorder => FakeMediaRecorder.current as FakeMediaRecorder };
+}
+
 beforeEach(() => {
   document.body.textContent = '';
   localStorage.clear();
@@ -82,6 +103,7 @@ beforeEach(() => {
 afterEach(() => {
   document.body.textContent = '';
   localStorage.clear();
+  vi.unstubAllGlobals();
 });
 
 describe('mountIbhUi options', () => {
@@ -388,6 +410,27 @@ describe('mountIbhUi options', () => {
 
     const noAuto = mount({ stt: { apiKey: 'k', model: 'elevenlabs/scribe-v2', autoSend: false } });
     expect(noAuto.q<HTMLInputElement>('.composer-bar input[type="checkbox"]').checked).toBe(false);
+  });
+
+  it('stt: omits cookies in BYO-key mode (cross-origin to openrouter.ai)', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ text: 'hello' }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { recorder } = stubRecorder();
+
+    const m = mount({ startOpen: true, stt: { model: 'm', apiKey: 'sk-user' } });
+    m.q<HTMLButtonElement>('.mic').click();
+    await vi.waitFor(() => expect(recorder()).not.toBeNull());
+    const rec = recorder();
+    rec.ondataavailable?.({ data: new Blob(['audio'], { type: 'audio/webm' }) });
+    rec.onstop?.();
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect((fetchMock.mock.calls[0]![1] as RequestInit).credentials).toBe('omit');
+    m.handle.destroy();
   });
 
   it('destroy removes the host and resolves pending consent with false', async () => {

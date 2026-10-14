@@ -162,7 +162,12 @@ export class OpenRouterClient {
       res = await fetch(`${base}/chat/completions`, {
         method: 'POST',
         signal: controller.signal,
-        credentials: 'include',
+        // Proxy mode (no key): same-origin, so the session cookie authenticates
+        // the request -> 'include'. BYO-key mode calls openrouter.ai cross-origin,
+        // which answers `Access-Control-Allow-Origin: *`; a credentialed request
+        // against a wildcard origin is blocked by the browser, so omit cookies
+        // there (the Authorization header carries the key).
+        credentials: this.opts.apiKey ? 'omit' : 'include',
         headers,
         body: JSON.stringify({
           model: request.model,

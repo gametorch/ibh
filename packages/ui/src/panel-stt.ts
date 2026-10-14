@@ -43,7 +43,9 @@ export function installStt(deps: {
     if (stt.apiKey) headers.Authorization = `Bearer ${stt.apiKey}`;
     const res = await fetch(url, {
       method: 'POST',
-      credentials: 'include',
+      // Same-origin proxy mode needs cookies; BYO-key mode calls openrouter.ai
+      // cross-origin (wildcard CORS), where a credentialed request is blocked.
+      credentials: stt.apiKey ? 'omit' : 'include',
       headers,
       body: JSON.stringify(payload),
     });
