@@ -95,6 +95,26 @@ describe('mountIbhUi options', () => {
     expect(opened.q<HTMLElement>('.panel').hidden).toBe(false);
   });
 
+  it('clicking the launcher opens the panel and hides the launcher', () => {
+    const m = mount({});
+    const launcher = m.q<HTMLButtonElement>('.launcher');
+    expect(m.q<HTMLElement>('.panel').hidden).toBe(true);
+    expect(launcher.hidden).toBe(false);
+    launcher.click();
+    expect(m.q<HTMLElement>('.panel').hidden).toBe(false);
+    expect(launcher.hidden).toBe(true);
+    m.handle.destroy();
+  });
+
+  it('launcher reopens the panel after it was closed with the × button', () => {
+    const m = mount({ startOpen: true });
+    m.q<HTMLButtonElement>('.icon-btn[title="Close"]').click();
+    expect(m.q<HTMLElement>('.panel').hidden).toBe(true);
+    m.q<HTMLButtonElement>('.launcher').click();
+    expect(m.q<HTMLElement>('.panel').hidden).toBe(false);
+    m.handle.destroy();
+  });
+
   it('audit tab is hidden by default and shown with showAuditTab', () => {
     const hidden = mount({});
     const visibleTabs = () =>

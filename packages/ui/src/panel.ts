@@ -200,6 +200,7 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
   tabChat.addEventListener('click', () => setView('chat'));
   tabAudit.addEventListener('click', () => setView('audit'));
 
+  launcher.addEventListener('click', () => (api.isOpen() ? api.close() : api.open()));
   btnClose.addEventListener('click', () => api.close());
   btnClear.addEventListener('click', () => {
     controller.clearConversation();
