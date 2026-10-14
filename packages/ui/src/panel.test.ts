@@ -292,6 +292,40 @@ describe('mountIbhUi options', () => {
     expect(m.shadow.querySelector('.status-line')?.textContent).toBe('thinking…');
   });
 
+  it('markdown: assistant messages render as markdown by default', () => {
+    const m = mount({ startOpen: true });
+    m.emitAssistant('**bold** and `code`');
+    const text = m.shadow.querySelector('.msg.assistant .msg-text.md');
+    expect(text).not.toBeNull();
+    expect(text?.querySelector('strong')?.textContent).toBe('bold');
+    expect(text?.querySelector('code')?.textContent).toBe('code');
+  });
+
+  it('markdown: disabled renders assistant messages as plain text', () => {
+    const m = mount({ startOpen: true, markdown: false });
+    m.emitAssistant('**bold**');
+    const text = m.shadow.querySelector('.msg.assistant .msg-text');
+    expect(text?.classList.contains('md')).toBe(false);
+    expect(text?.textContent).toBe('**bold**');
+    expect(text?.querySelector('strong')).toBeNull();
+  });
+
+  it('markdown: a custom renderer is used for assistant messages', () => {
+    const m = mount({ startOpen: true, markdown: { render: (text) => `<em>${text}</em>` } });
+    m.emitAssistant('hello');
+    expect(m.shadow.querySelector('.msg.assistant .msg-text.md em')?.textContent).toBe('hello');
+  });
+
+  it('markdown: user messages stay plain text', () => {
+    const m = mount({ startOpen: true });
+    const input = m.q<HTMLTextAreaElement>('.composer textarea');
+    input.value = '**not bold**';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const text = m.shadow.querySelector('.msg.user .msg-text');
+    expect(text?.textContent).toBe('**not bold**');
+    expect(text?.querySelector('strong')).toBeNull();
+  });
+
   it('user input sends through the controller (Enter key and button)', () => {
     const m = mount({ startOpen: true });
     const input = m.q<HTMLTextAreaElement>('.composer textarea');

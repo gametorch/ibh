@@ -9,8 +9,9 @@
 > packages, with voice input (speech-to-text via OpenRouter STT models) and image
 > input (attach/paste/drag & drop images, or the agent's built-in `attach_image`
 > tool that pulls SVG/URL/page images itself, for the model to analyze) built
-> in; LLM calls run through a thin proxy on the integrator's backend so no key
-> ever ships to the browser.
+> in, and assistant replies rendered as safe markdown by default (customizable or
+> off via `ui.markdown`); LLM calls run through a thin proxy on the integrator's
+> backend so no key ever ships to the browser.
 
 ## Docs
 

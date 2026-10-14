@@ -351,4 +351,47 @@ button { font: inherit; cursor: pointer; }
 .msg-text:empty { display: none; }
 
 .panel.drop-target { outline: 2px dashed var(--ibh-accent); outline-offset: -4px; }
+
+/* markdown (assistant messages) ---------------------------------------------- */
+.msg-text.md { white-space: normal; }
+.msg-text.md > :first-child { margin-top: 0; }
+.msg-text.md > :last-child { margin-bottom: 0; }
+.msg-text.md p { margin: 0 0 0.5em; }
+.msg-text.md h1, .msg-text.md h2, .msg-text.md h3, .msg-text.md h4, .msg-text.md h5, .msg-text.md h6 {
+  margin: 0.6em 0 0.35em;
+  line-height: 1.25;
+  font-weight: 700;
+}
+.msg-text.md h1 { font-size: 1.25em; }
+.msg-text.md h2 { font-size: 1.15em; }
+.msg-text.md h3 { font-size: 1.05em; }
+.msg-text.md ul, .msg-text.md ol { margin: 0.3em 0 0.5em; padding-left: 1.35em; }
+.msg-text.md li { margin: 0.15em 0; }
+.msg-text.md code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--ibh-bg);
+  border: 1px solid var(--ibh-border);
+  border-radius: 4px;
+  padding: 0.08em 0.32em;
+}
+.msg-text.md pre {
+  background: var(--ibh-bg);
+  border: 1px solid var(--ibh-border);
+  border-radius: var(--ibh-radius-s);
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 0.4em 0;
+}
+.msg-text.md pre code { background: none; border: none; padding: 0; font-size: 0.88em; }
+.msg-text.md a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.msg-text.md blockquote {
+  margin: 0.4em 0;
+  padding-left: 0.7em;
+  border-left: 3px solid var(--ibh-border);
+  color: var(--ibh-muted);
+}
+.msg-text.md hr { border: none; border-top: 1px solid var(--ibh-border); margin: 0.6em 0; }
+.msg-text.md strong { font-weight: 700; }
+.msg-text.md del { opacity: 0.7; }
 `;

@@ -71,7 +71,7 @@ the user did not mention.`,
 | `guide`         | Soft contract: prose for the agent. String or `() => string`. Truncated at 8k chars.         |
 | `auth`          | `{ mode: 'cookie' }`, `{ mode: 'token', getToken: async () => … }` or `{ mode: 'custom', applyAuth }`. |
 | `llm`           | `{ openRouterKey?, baseUrl?, headers? }`. Three modes — see "LLM access" below. Production: point `baseUrl` at your backend proxy (no key in the page); pure frontend: BYO *user* key. A shared site key in the page is refused by init. |
-| `ui`            | `{ enabled?, accent?, startOpen?, theme?, hideThemePicker?, showClearConversation?, showAuditTab?, stt?, images?, style?, css?, defaultPosition? }`. `enabled: false` = headless (see security note). Theming & placement: see below. |
+| `ui`            | `{ enabled?, accent?, startOpen?, theme?, hideThemePicker?, showClearConversation?, showAuditTab?, stt?, images?, markdown?, style?, css?, defaultPosition? }`. `enabled: false` = headless (see security note). Theming & placement: see below. |
 | `persistence`   | `{ enabled?, key? }`. Off by default — history, audit log and session approvals live in memory and a refresh starts clean. Enable to store them in localStorage (default key `ibh:session`) and resume on the next load. Budgets/rate limits are never persisted. |
 | `consent`       | `(req) => boolean \| Promise<boolean>` used only in headless mode (`ui.enabled: false`). Without it, everything above `auto` is denied (fail-closed). Supplying it opts in to executing consented actions without the panel. |
 | `nav`           | `{ customNavigate?: (url) => void }` for framework routers (e.g. Next.js App Router).       |
@@ -367,6 +367,28 @@ visible to the model on the next step. It is restricted to the site origin +
 `data:` URLs and to page elements outside ibh's own UI, and the captured image is
 sent only to your configured LLM endpoint. Nothing to wire — it works in both
 proxy and BYO-key modes.
+
+### Markdown in messages
+
+Assistant messages are rendered as markdown by default, using a small built-in,
+**XSS-safe** renderer: the whole input is HTML-escaped first and only the panel's
+own tags are ever emitted, and link targets are limited to `http(s)` / `mailto` /
+relative URLs (no `javascript:`). It handles headings, bold/italic/strikethrough,
+inline and fenced code, lists, blockquotes, links and horizontal rules. User
+messages stay plain text.
+
+```js
+ui: {
+  markdown: false, // plain text (opt out)
+  // …or bring your own renderer:
+  // markdown: { render: (text) => myMarkdownToHtml(text) }, // HTML string or DOM Node
+}
+```
+
+`ui.markdown` is `true` (the default), `false`, or `{ enabled?, render? }`. A
+custom `render` is **trusted**: if it returns a string it is inserted with
+`innerHTML`, so sanitize it yourself (or return a DOM `Node`). The built-in
+renderer needs no configuration and adds no dependencies.
 
 ### Launcher & placeholder
 

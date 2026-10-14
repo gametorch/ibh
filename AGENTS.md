@@ -54,6 +54,11 @@ also attach images itself via the built-in `attach_image` tool (raw SVG markup,
 a same-origin/`data:` URL, or a page `selector`/`ref`), so users never have to
 screenshot art their site already has.
 
+Assistant replies render as markdown by default (a small, XSS-safe built-in
+renderer: input is escaped first, links restricted to http(s)/mailto/relative).
+Customize with `ui.markdown` — `false` for plain text, or `{ render }` for your
+own renderer (HTML string or DOM Node). No extra dependency, nothing to wire.
+
 ### 2. The capability manifest (required — fail-closed)
 
 A JSON object declaring EVERYTHING the agent may do: `api` endpoints (with HTTP

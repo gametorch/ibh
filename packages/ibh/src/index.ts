@@ -10,6 +10,7 @@ import { createSessionPersistence } from './persistence';
 
 export type { IbhManifest, AuthAdapter, AuditEntry, ConsentRequest, ToolOutcome, AgentSession, IbhUiHandle, UiTheme };
 export type { ImageAttachment, ContentPart, MessageContent, ChatMessage } from '@ibh/core';
+export type { MarkdownConfig, MarkdownRenderer } from '@ibh/ui';
 
 export const VERSION = '0.1.0';
 
@@ -52,6 +53,12 @@ export interface IbhConfig {
     };
     /** Composer textarea placeholder text. */
     placeholder?: string;
+    /**
+     * Markdown rendering for assistant messages (enabled by default; the built-in
+     * renderer is XSS-safe). Set `false` for plain text, or `{ render }` to supply
+     * your own renderer (an HTML string, inserted as-is, or a DOM Node).
+     */
+    markdown?: boolean | { enabled?: boolean; render?: (text: string) => string | Node };
     /** Empty-chat state: title + hint shown before the first message. */
     emptyState?: {
       title?: string;
@@ -365,6 +372,7 @@ export function init(config: IbhConfig): IbhInstance {
       showAuditTab: config.ui?.showAuditTab,
       launcher: config.ui?.launcher,
       placeholder: config.ui?.placeholder,
+      markdown: config.ui?.markdown,
       emptyState: config.ui?.emptyState,
       style: config.ui?.style,
       css: config.ui?.css,

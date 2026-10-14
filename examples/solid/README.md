@@ -52,6 +52,8 @@ export function App() {
 
 Launcher (closed-state circle), its colors, the composer placeholder, and the empty-chat title/hint are fully customizable — see theming docs (`ui.launcher`, `ui.placeholder`, `ui.emptyState`, `--ibh-launcher-*`).
 
+Assistant replies render as **markdown** by default (safe built-in renderer). Customize or disable with `ui.markdown` — `false` for plain text, or `{ render }` for your own renderer.
+
 Notes:
 
 - **SSR**: ibh is browser-only. SolidStart: render the component inside client-only

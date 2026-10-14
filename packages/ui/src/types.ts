@@ -1,4 +1,5 @@
 import type { AuditEntry, ConsentRequest, ImageAttachment, ToolOutcome } from '@ibh/core';
+import type { MarkdownConfig } from './markdown';
 
 export type UiTheme = 'light' | 'dark' | 'system';
 
@@ -78,6 +79,13 @@ export interface IbhUiOptions {
   };
   /** Composer textarea placeholder text. */
   placeholder?: string;
+  /**
+   * Markdown rendering for assistant messages. Enabled by default (safe built-in
+   * renderer: raw HTML is escaped, link targets restricted). Set `false` to render
+   * plain text, or `{ render }` to supply your own renderer (an HTML string, which
+   * is trusted and inserted as-is, or a DOM Node).
+   */
+  markdown?: MarkdownConfig;
   /**
    * Image input: an attach button in the composer (file picker, paste, drag &
    * drop) that sends images to the model for analysis. Enabled by default; set

@@ -1,4 +1,5 @@
 import { el } from './el';
+import type { MarkdownRenderer } from './markdown';
 
 /** The chat surface: messages, chips, notices, status line and scroll. */
 export interface ChatSurface {
@@ -16,8 +17,14 @@ export interface ChatSurface {
   restoreEmpty(): void;
 }
 
-export function createChatSurface(deps: { chatView: HTMLElement; empty: HTMLElement }): ChatSurface {
+export function createChatSurface(deps: {
+  chatView: HTMLElement;
+  empty: HTMLElement;
+  /** When set, assistant messages are rendered through this (markdown). */
+  markdown?: MarkdownRenderer | null;
+}): ChatSurface {
   const { chatView, empty } = deps;
+  const markdown = deps.markdown ?? null;
   let statusLine: HTMLElement | null = null;
   let pendingChip: HTMLElement | null = null;
 
@@ -47,7 +54,14 @@ export function createChatSurface(deps: { chatView: HTMLElement; empty: HTMLElem
     }
     if (text.trim().length > 0 || !images || images.length === 0) {
       const t = el('div', 'msg-text');
-      t.textContent = text;
+      if (markdown && cls.includes('assistant')) {
+        t.classList.add('md');
+        const rendered = markdown(text);
+        if (typeof rendered === 'string') t.innerHTML = rendered;
+        else t.append(rendered);
+      } else {
+        t.textContent = text;
+      }
       m.append(t);
     }
     chatView.append(m);

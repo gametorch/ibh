@@ -8,6 +8,7 @@ import { createConsentFlow } from './panel-consent';
 import { createChatSurface } from './panel-messages';
 import { installStt } from './panel-stt';
 import { installImageInput } from './panel-images';
+import { resolveMarkdownRenderer } from './markdown';
 
 function fmtTime(ts: number): string {
   const d = new Date(ts);
@@ -216,7 +217,7 @@ export function mountIbhUi(controller: IbhUiController, opts: IbhUiOptions = {})
 
   const theme = installTheme({ host, btnTheme, initialTheme: opts.theme });
   const geometry = installGeometry({ panel, header, launcher, defaultPosition: opts.defaultPosition });
-  const surface = createChatSurface({ chatView, empty });
+  const surface = createChatSurface({ chatView, empty, markdown: resolveMarkdownRenderer(opts.markdown) });
   const { addMessage, addChip, scroll, removeEmpty, showStatus, clearStatus, setPendingChip, takePendingChip } = surface;
   const consent = createConsentFlow({
     chatView,
